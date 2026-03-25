@@ -181,17 +181,42 @@ Styled container on `--surface-raised`. Contains:
 - POI category legend using the geo accent colors
 - Overlay info panel with backdrop blur
 
-## HTML Page Structure
+## Tech Stack Alignment
 
-Single self-contained HTML file with:
-- **Sticky sidebar nav**: Colors, Typography, Components, Spacing sections
-- **Dark/light mode toggle**: Top right, persists preference
-- **Google Fonts**: Space Grotesk, Inter, JetBrains Mono (CDN)
-- **Lucide Icons**: CDN
-- **No other external dependencies**
-- **Embedded Argus SVG logo** (from `assets/argus-logo.svg`)
+The Argus frontend uses:
+- **React 19 + TypeScript** with Vite
+- **Tailwind CSS 4** with `@theme inline` and `@custom-variant dark`
+- **shadcn/ui** (base-nova preset) with CSS variables in oklch
+- **Lucide React** for icons
+- **Mapbox GL** for mapping
+- Dark mode via `.dark` class on `<html>`
 
-## File Locations
+### How tokens map to the existing system
 
-- `brandkit.html` — project root
-- `brandkit.md` — project root (frontend reference)
+The `brandkit.md` must express all design tokens as:
+1. **CSS custom properties** compatible with the existing `index.css` `:root` / `.dark` pattern
+2. **Tailwind utility classes** where applicable (e.g., `bg-card`, `text-muted-foreground`)
+3. **New neumorphic tokens** (`--neu-shadow-dark`, `--neu-shadow-light`, `--neu-flat`, `--neu-pressed`, `--neu-elevated`, `--neu-glow`, `--surface-raised`) added to the `@theme inline` block
+4. **Font overrides**: Replace `--font-sans` with Inter, add `--font-heading` as Space Grotesk, add `--font-mono` as JetBrains Mono
+
+Existing shadcn variables (`--primary`, `--card`, `--accent`, `--destructive`, etc.) should be remapped to the Argus brand colors in oklch format.
+
+## Deliverables
+
+### 1. `brandkit.html` (project root)
+
+Self-contained HTML reference page — **not** part of the React app. Uses Google Fonts CDN and Lucide CDN. Contains:
+- Sticky sidebar nav: Colors, Typography, Components, Spacing
+- Dark/light mode toggle (top right)
+- Live-rendered color swatches, type samples, component mockups
+- Embedded Argus SVG logo (from `assets/argus-logo.svg`)
+
+### 2. `brandkit.md` (project root)
+
+Frontend implementation reference. Defines:
+- All CSS custom properties with oklch values for shadcn compatibility
+- Tailwind `@theme inline` additions for neumorphic tokens
+- Font stack configuration (`@fontsource` packages to install)
+- Type scale as Tailwind utility patterns
+- Component patterns as React/shadcn conventions (not raw HTML)
+- Neumorphic shadow utilities as Tailwind custom classes
