@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build two deliverables — a standalone `brandkit.html` visual reference page and a `brandkit.md` frontend implementation guide — codifying the Argus dark neumorphic design system.
+**Goal:** Build two deliverables — a standalone `brandkit.html` visual reference page and a `brandkit.md` frontend implementation guide — codifying the Argus dark neumorphic design system. The Argus Panoptes (all-seeing giant) mythology threads through the visual language as concentric rings, radial scan patterns, lens motifs, and glow pulses.
 
-**Architecture:** Two independent files at the project root. `brandkit.md` defines all design tokens mapped to the existing React/Tailwind/shadcn stack. `brandkit.html` is a self-contained visual showcase (not part of the React app) that renders every token and component mockup live.
+**Architecture:** Two independent files at the project root. `brandkit.md` defines all design tokens mapped to the existing React/Tailwind/shadcn stack, including the Panoptes visual motif system. `brandkit.html` is a self-contained visual showcase (not part of the React app) that renders every token and component mockup live, with the mythological motifs woven into component designs.
 
 **Tech Stack:** HTML/CSS/JS (brandkit.html), Markdown (brandkit.md), Google Fonts CDN, Lucide CDN icons
 
@@ -33,6 +33,38 @@ Write the complete file with these sections:
 
 > Precision property intelligence. Built for analysts, investors, and curious homeowners.
 > Design system: Dark Neumorphic Soft UI — inspired by Abhinai Adhikaram's neumorphic system, remixed for dark mode intelligence UI.
+>
+> **Name origin:** Argus Panoptes — the all-seeing giant of Greek mythology. The visual identity carries a subtle sense of omniscience through concentric ring motifs, radial scan patterns, lens/iris accents, dot-grid textures, and glow pulses. The mythology is a whisper in the design, not a costume.
+
+---
+
+## 0. Visual Motif: The All-Seeing Eye (Argus Panoptes)
+
+The hundred-eyed giant informs these recurring design elements:
+
+| Motif | Where It Appears | Implementation |
+|---|---|---|
+| **Concentric rings** | Isochrone overlays, confidence indicators, loading spinners | CSS `border-radius: 50%` rings with graduated `--primary` opacity (40%/25%/15%) |
+| **Radial scan** | Search animation, data processing state | CSS `conic-gradient` sweep on a circular element, animated via `@keyframes` |
+| **Lens / iris** | Logo, empty states, section dividers | SVG eye logomark; simplified iris arcs as decorative `<hr>` or section breaks |
+| **Dot grid** | Background textures, empty data states | CSS `radial-gradient` dot pattern at low opacity on `--surface-raised` |
+| **Glow pulse** | Active confidence dots, live data badges | `@keyframes` animating `box-shadow` between `--neu-glow` and transparent |
+
+### CSS Animation Tokens
+
+```css
+@keyframes argus-pulse {
+  0%, 100% { box-shadow: 0 0 8px var(--accent-glow); }
+  50% { box-shadow: 0 0 16px var(--accent-glow), 0 0 32px var(--accent-glow); }
+}
+
+@keyframes argus-scan {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+```
+
+Usage: `animation: argus-pulse 2s ease-in-out infinite` on confidence dots. `animation: argus-scan 3s linear infinite` on loading/search states.
 
 ---
 
@@ -320,6 +352,7 @@ Replace the contents of `frontend/src/index.css` with the Argus brand tokens. Ke
 4. Add neumorphic tokens (`--color-surface-raised`, `--neu-shadow-dark`, `--neu-shadow-light`, `--neu-flat`, `--neu-pressed`, `--neu-elevated`, `--neu-glow`, `--accent-glow`) to `@theme inline`
 5. Remap all `:root` and `.dark` color values to the Argus palette in oklch
 6. Update chart tokens to the brand palette
+7. Add Argus Panoptes animation keyframes (`argus-pulse`, `argus-scan`) and visual motif documentation
 ```
 
 - [ ] **Step 2: Verify the file renders correctly in preview**
@@ -348,9 +381,10 @@ Create `brandkit.html` at the project root. This is a single self-contained HTML
 - Lucide CDN (unpkg)
 - Embedded Argus SVG logo (copy from `assets/argus-logo.svg` and `assets/argus-logo-light.svg`)
 - CSS custom properties matching the full token set from `brandkit.md`
-- Sticky sidebar navigation with links: Colors, Typography, Components, Spacing
-- Dark/light mode toggle button in the top-right header
+- Sticky sidebar navigation with links: Motif, Colors, Typography, Components, Spacing
+- Dark/light mode toggle button in the top-right header (use a Lucide `Eye` / `EyeOff` icon pair as the toggle — on-brand Panoptes reference)
 - JavaScript for: dark/light toggle (adds/removes `.dark` class on `<html>`, swaps CSS variables), smooth scroll nav, active section highlighting on scroll
+- Subtle dot-grid background texture on the page body using CSS `radial-gradient` (Panoptes "many eyes" motif, very low opacity ~3-5%)
 
 **Colors section** should render:
 - Surface colors as large rectangular swatches showing `--background`, `--surface-raised`, `--card` side by side with their hex, oklch, and CSS variable name
@@ -358,6 +392,12 @@ Create `brandkit.html` at the project root. This is a single self-contained HTML
 - Functional colors: success, warning, error, neutral as a row of circles
 - Text hierarchy: each level rendered as sample text on the background color
 - Map/geo accents: colored dots with category labels (transit, parks, schools, hospitals, retail) plus an isochrone ring preview (three concentric circles at graduated opacity)
+
+**Add a "Visual Motif" section** (first section, before Colors):
+- Hero banner with the Argus logo centered, tagline "The All-Seeing Eye" in Space Grotesk, with animated concentric rings radiating outward behind the logo using `argus-pulse` keyframes
+- Motif showcase: five cards showing each Panoptes motif (concentric rings, radial scan, lens/iris, dot grid, glow pulse) with a live CSS demo in each card and a description of where it appears in the product
+- The radial scan demo: a circular element with a `conic-gradient` sweep line animated via `argus-scan`
+- The glow pulse demo: a confidence dot with `argus-pulse` animation live
 
 - [ ] **Step 2: Add the Typography section**
 
@@ -398,9 +438,9 @@ Add a "Components" section after Typography. Build a Property Card component moc
 - Price: `$847,000` in Space Grotesk 24px/700
 - Address: `123 Queen St W, Toronto, ON` in Inter 13px, `--text-tertiary` color (`--muted-foreground`)
 - Stats row: `3 bed · 2 bath · 1,847 sqft` in Inter 12px, `--text-muted` color
-- Two insight chips: "Pool Detected · 94%" and "Renovated Kitchen · 87%" using neumorphic inset style with glowing dots
+- Two insight chips: "Pool Detected · 94%" and "Renovated Kitchen · 87%" using neumorphic inset style with glowing dots that use `argus-pulse` animation
 - Confidence bar below chips (gradient fill from `--primary` to `--accent`)
-- "View Intelligence" button with neumorphic flat shadow, indigo text, arrow icon
+- "View Intelligence" button with neumorphic flat shadow, indigo text, Lucide `Eye` icon (Panoptes nod)
 
 - [ ] **Step 2: Add Search Bar mockup**
 
@@ -408,7 +448,7 @@ Below the property card, add:
 - Full-width search bar with neumorphic flat shadow
 - Lucide `Search` icon in `--primary` color on the left
 - Placeholder text: "Enter an address, city, or postal code"
-- On focus (use `:focus-within`), shadow transitions to `--neu-pressed` (inset)
+- On focus (use `:focus-within`), shadow transitions to `--neu-pressed` (inset) and a subtle radial scan animation plays on the search icon (Panoptes "scanning" motif)
 - Right side: a small neumorphic button with Lucide `MapPin` icon
 
 - [ ] **Step 3: Add Stat/Insight Chip component showcase**
@@ -425,7 +465,7 @@ Below the search bar, add a row of chips in different states:
 Below the chips, add a map panel mockup:
 - Full-width container on `--surface-raised` background with `--neu-elevated` shadow
 - Dark map placeholder area (dark gray/navy gradient to simulate a dark-themed map, no actual map tile needed)
-- Three concentric isochrone rings centered in the map area: innermost at 40% opacity `--primary`, middle at 25%, outermost at 15%
+- Three concentric isochrone rings centered in the map area: innermost at 40% opacity `--primary`, middle at 25%, outermost at 15% — these directly echo the Panoptes concentric ring motif
 - POI legend overlay panel in bottom-left: frosted glass style (`--card` at 95% opacity, `backdrop-filter: blur(12px)`), showing colored dots + labels for Transit, Parks, Schools, Hospitals, Retail
 - A small info callout panel in top-right of the map: showing coordinates in JetBrains Mono (`43.6532°N, 79.3832°W`) and a confidence badge
 

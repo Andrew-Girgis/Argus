@@ -9,10 +9,23 @@ Build a visual brand kit for Argus, a property intelligence platform. Two delive
 
 ## Brand Identity
 
+- **Name Origin**: Argus Panoptes — the all-seeing giant of Greek mythology with a hundred eyes. The visual identity subtly carries a sense of omniscience and total visibility. This manifests through: radial/lens-like motifs, concentric circle elements, and the eye-inspired logomark. The mythology is a whisper in the design, not a costume — abstract and precise, never literal or illustrative.
 - **Positioning**: Precision property intelligence. Built for analysts, investors, and curious homeowners.
 - **Tone**: Authoritative, data-driven, trustworthy. Clean and professional. "Bloomberg meets Zillow."
-- **Visual Philosophy**: Dark neumorphic soft UI with tactile embossed depth. Data-forward intelligence layer — monospace for data values, confidence scores, coordinates. Card-based layouts, photography-forward, clear information hierarchy.
+- **Visual Philosophy**: Dark neumorphic soft UI with tactile embossed depth. Data-forward intelligence layer — monospace for data values, confidence scores, coordinates. Card-based layouts, photography-forward, clear information hierarchy. The Argus Panoptes motif threads through the system as concentric rings (isochrones, confidence indicators, loading states), radial scan patterns (search animations, data processing), and the ever-present eye logomark — reinforcing omniscient property intelligence.
 - **Inspiration**: Zillow's card-heavy, address-search-centered UI adapted with neumorphic depth system inspired by Abhinai Adhikaram's Soft UI design system, remixed for dark mode.
+
+### Visual Motif: The All-Seeing Eye
+
+The Argus Panoptes mythology informs these recurring design elements:
+
+| Motif | Where It Appears | How It Manifests |
+|---|---|---|
+| **Concentric rings** | Isochrone map overlays, confidence indicators, loading spinners | Expanding rings from a center point — echoes the hundred eyes radiating outward |
+| **Radial scan** | Search animation, data processing indicator | A sweeping radial line (like a radar) suggesting constant surveillance of data |
+| **Lens/iris** | Logo, empty states, section dividers | The existing eye logomark; simplified iris shapes as decorative accents |
+| **Dot grid / constellation** | Background textures, data visualization empty states | Scattered dots suggesting many eyes watching — subtle, never busy |
+| **Glow pulse** | Active confidence indicators, live data badges | A slow breathing glow on key indicators — the system is alive and watching |
 
 ## Design Decisions (User-Validated)
 
