@@ -1,0 +1,40 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+backend/.venv/
+
+# Environment
+.env
+.env.local
+frontend/.env
+frontend/.env.local
+
+# Node
+node_modules/
+frontend/dist/
+
+# Claude Code
+.claude/
+.superpowers/
+
+# Models
+models/
+
+# Inspiration assets
+inspo/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
