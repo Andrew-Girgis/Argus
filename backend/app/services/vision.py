@@ -2,15 +2,17 @@ import json
 import logging
 import re
 
-from openai import AsyncOpenAI
+from langfuse import observe
+from langfuse.openai import AsyncOpenAI
 
 from app.config import settings
 from app.models.schemas import ServiceResult
+from app.observability import langfuse
 
 logger = logging.getLogger(__name__)
 
-ANALYSIS_PROMPT = """You are an expert property analyst. Analyze the provided property images
-(street view and/or satellite) and return a JSON object with the following fields.
+ANALYSIS_PROMPT = """You are a Canadian residential property intelligence extraction engine.
+Analyze the provided property images (street view and/or satellite) and return a JSON object.
 
 IMPORTANT RULES:
 - For every field include a paired confidence score (0.0 to 1.0) reflecting how certain you are
@@ -20,6 +22,12 @@ IMPORTANT RULES:
 - For boolean fields: use true, false, or null (cannot determine).
 - For string fields: use the listed options, or null if you cannot determine.
 - For numeric fields: use an integer, or null if you cannot determine.
+- Use Canadian residential conventions. Ontario-specific assumptions are allowed where the
+  address/context supports them, but mark those values as inferred or assumed.
+- Distinguish observed visual evidence from inferred or regional assumptions.
+- Use this reasoning hierarchy when exact data is unavailable: exact visible evidence,
+  satellite/street imagery inference, same-street/subdivision patterns if evident, then
+  regional construction conventions.
 
 {
   "property_type": "one of: Detached, Semi-Detached, Townhouse, Condo, Duplex, Triplex, Other — or null if unclear",
@@ -86,12 +94,46 @@ IMPORTANT RULES:
   "detached_structure_confidence": 0.0 to 1.0,
 
   "has_ac_unit": true/false/null,
-  "ac_unit_confidence": 0.0 to 1.0
+  "ac_unit_confidence": 0.0 to 1.0,
+
+  "data_quality_note": "short note about image quality, uncertainty, and inference limits",
+  "sources_used": ["street_view", "satellite", "sam_segmentation", "regional_convention"],
+  "enhanced_intelligence": {
+    "property_subtype": {"value": "string|null", "confidence": 0.0, "evidence_kind": "observed|inferred|assumed|unknown", "basis": "string", "sources_used": ["string"]},
+    "bedrooms_estimated_main_above_grade": {"value": "number|null", "confidence": 0.0, "evidence_kind": "inferred|unknown", "basis": "string", "sources_used": ["string"]},
+    "bedrooms_possible_total_with_basement": {"value": "number|null", "confidence": 0.0, "evidence_kind": "inferred|unknown", "basis": "string", "sources_used": ["string"]},
+    "bathrooms_estimated": {"value": "number|null", "confidence": 0.0, "evidence_kind": "inferred|unknown", "basis": "string", "sources_used": ["string"]},
+    "construction_year_estimated": {"value": "number|null", "confidence": 0.0, "evidence_kind": "inferred|unknown", "basis": "string", "sources_used": ["string"]},
+    "heating_system_exists": {"value": "boolean|null", "confidence": 0.0, "evidence_kind": "assumed|unknown", "basis": "string", "sources_used": ["string"]},
+    "heating_system_type": {"value": ["string"], "confidence": 0.0, "evidence_kind": "assumed|unknown", "basis": "string", "sources_used": ["string"]},
+    "cooling_system_exists": {"value": "boolean|null", "confidence": 0.0, "evidence_kind": "observed|inferred|unknown", "basis": "string", "sources_used": ["string"]},
+    "water_heater_ownership": {"value": "Owned|Rental|Unknown", "confidence": 0.0, "evidence_kind": "assumed|unknown", "basis": "string", "sources_used": ["string"]},
+    "fireplace_exists": {"value": "boolean|null", "confidence": 0.0, "evidence_kind": "observed|inferred|unknown", "basis": "string", "sources_used": ["string"]},
+    "hot_tub_exists": {"value": "boolean|null", "confidence": 0.0, "evidence_kind": "observed|unknown", "basis": "string", "sources_used": ["string"]},
+    "sump_pump_exists": {"value": "boolean|null", "confidence": 0.0, "evidence_kind": "assumed|unknown", "basis": "string", "sources_used": ["string"]},
+    "roof_tree_canopy_above_roof": {"value": "boolean|null", "confidence": 0.0, "evidence_kind": "observed|unknown", "basis": "string", "sources_used": ["string"]},
+    "garage_type": {"value": "string|null", "confidence": 0.0, "evidence_kind": "observed|inferred|unknown", "basis": "string", "sources_used": ["string"]},
+    "garage_spaces_estimated": {"value": "number|null", "confidence": 0.0, "evidence_kind": "observed|inferred|unknown", "basis": "string", "sources_used": ["string"]},
+    "driveway_parking_spaces_estimated": {"value": "number|null", "confidence": 0.0, "evidence_kind": "observed|inferred|unknown", "basis": "string", "sources_used": ["string"]},
+    "total_parking_spaces_estimated": {"value": "number|null", "confidence": 0.0, "evidence_kind": "inferred|unknown", "basis": "string", "sources_used": ["string"]},
+    "basement_exists": {"value": "boolean|null", "confidence": 0.0, "evidence_kind": "inferred|assumed|unknown", "basis": "string", "sources_used": ["string"]},
+    "basement_type": {"value": "string|null", "confidence": 0.0, "evidence_kind": "inferred|unknown", "basis": "string", "sources_used": ["string"]},
+    "foundation_type": {"value": "string|null", "confidence": 0.0, "evidence_kind": "inferred|assumed|unknown", "basis": "string", "sources_used": ["string"]},
+    "water_supply": {"value": "string|null", "confidence": 0.0, "evidence_kind": "assumed|unknown", "basis": "string", "sources_used": ["string"]},
+    "sewer": {"value": "string|null", "confidence": 0.0, "evidence_kind": "assumed|unknown", "basis": "string", "sources_used": ["string"]},
+    "lot_frontage_ft_estimated": {"value": "number|null", "confidence": 0.0, "evidence_kind": "inferred|unknown", "basis": "string", "sources_used": ["string"]},
+    "lot_depth_ft_estimated": {"value": "number|null", "confidence": 0.0, "evidence_kind": "inferred|unknown", "basis": "string", "sources_used": ["string"]},
+    "estimated_finished_area_sqft_range": {"value": "string|null", "confidence": 0.0, "evidence_kind": "inferred|unknown", "basis": "string", "sources_used": ["string"]},
+    "community_features": {"value": ["string"], "confidence": 0.0, "evidence_kind": "observed|inferred|unknown", "basis": "string", "sources_used": ["string"]},
+    "likely_interior_features": {"value": ["string"], "confidence": 0.0, "evidence_kind": "inferred|unknown", "basis": "string", "sources_used": ["string"]},
+    "additional_features": {"value": {}, "confidence": 0.0, "evidence_kind": "observed|inferred|unknown", "basis": "string", "sources_used": ["string"]}
+  }
 }
 
 Analyze both the street view image (for building details, exterior, garage, condition) and
-the satellite image (for lot shape, pool, trees, fencing, yard). Return ONLY valid JSON
-with no additional text or markdown formatting."""
+the satellite image (for lot shape, pool, trees, fencing, yard). If the satellite image
+has a map marker, focus the satellite analysis on the property directly under that marker.
+Return ONLY valid JSON with no additional text or markdown formatting."""
 
 
 def _extract_json(text: str) -> dict:
@@ -118,11 +160,36 @@ def _extract_json(text: str) -> dict:
     raise json.JSONDecodeError("No JSON found in response", text, 0)
 
 
+def _completion_options() -> dict:
+    model = settings.OPENAI_SEGMENTED_REASONING_MODEL or settings.OPENAI_VISION_MODEL
+    options = {
+        "model": model,
+        "messages": [],
+        "metadata": {"feature": "property-analysis", "configured_model": model},
+    }
+    if model.startswith("gpt-5"):
+        options["max_completion_tokens"] = 1500
+        options["reasoning_effort"] = "none"
+    else:
+        options["max_tokens"] = 1500
+        options["temperature"] = 0.2
+    return options
+
+
+@observe(name="property-vision", capture_input=False, capture_output=False)
 async def analyze_property(
     street_view_url: str | None = None,
     satellite_url: str | None = None,
 ) -> ServiceResult:
-    """Analyze property images using OpenAI Vision API (gpt-4o)."""
+    """Analyze property images using OpenAI Vision API."""
+    langfuse.update_current_span(
+        input={
+            "has_street_view": street_view_url is not None,
+            "has_satellite": satellite_url is not None,
+        },
+        metadata={"service": "openai_vision"},
+    )
+    raw_text = ""
     try:
         if not street_view_url and not satellite_url:
             return ServiceResult(
@@ -152,16 +219,25 @@ async def analyze_property(
             )
 
         response = await client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": content}],
-            max_tokens=1500,
-            temperature=0.2,
+            name="property-vision-analysis",
+            **{
+                **_completion_options(),
+                "messages": [{"role": "user", "content": content}],
+            },
         )
 
         raw_text = response.choices[0].message.content or ""
         logger.info("Vision API raw response: %s", raw_text[:500])
 
         analysis = _extract_json(raw_text)
+
+        langfuse.update_current_span(
+            output={
+                "property_type": analysis.get("property_type"),
+                "home_style": analysis.get("home_style"),
+                "condition_estimate": analysis.get("condition_estimate"),
+            }
+        )
 
         return ServiceResult(data=analysis, error=None, source="openai_vision")
 

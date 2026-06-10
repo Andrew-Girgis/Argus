@@ -108,6 +108,17 @@ class AnalyzeRequest(BaseModel):
     satellite_url: str
 
 
+class SegmentTarget(BaseModel):
+    type: str
+    prompt: str
+
+
+class SegmentRequest(BaseModel):
+    image_url: str
+    image_type: str = "satellite"
+    targets: list[SegmentTarget] | None = None
+
+
 class ServiceResult(BaseModel):
     data: Any = None
     error: str | None = None
@@ -117,6 +128,8 @@ class ServiceResult(BaseModel):
 class FeedbackRequest(BaseModel):
     analysis_id: str | None = None
     property_id: str | None = None
+    profile_id: str | None = None
+    observation_id: str | None = None
     field_name: str
     ai_value: Any = None
     ai_confidence: float | None = None
@@ -128,5 +141,7 @@ class PropertyResponse(BaseModel):
     property: Property | None = None
     images: list[PropertyImage] = Field(default_factory=list)
     analysis: AIAnalysis | None = None
+    segmentation: dict[str, Any] | None = None
     geospatial: GeospatialData | None = None
+    cache: dict[str, Any] = Field(default_factory=dict)
     errors: list[str] = Field(default_factory=list)

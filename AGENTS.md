@@ -20,6 +20,7 @@ make build        # cd frontend && vp build
 - **Backend** (`backend/app/`): FastAPI app, entrypoint `app.main:app`
   - Routes at `/api/v1/property` and `/api/v1/feedback`
   - Services in `app/services/`: each returns `ServiceResult(data, error, source)` — never raises, always returns a result
+  - Persistence uses local Postgres via `DATABASE_URL`; Supabase has been removed
   - Config via `pydantic_settings` in `app/config.py`, reads from `../.env` (project root)
   - SAM2 segmentation is optional (conditional import — stubs gracefully when missing)
 
@@ -34,7 +35,7 @@ make build        # cd frontend && vp build
 - **Environment**: Root `.env` is the single source of truth. `make dev` and `make frontend` auto-generate `frontend/.env` from it. Never edit `frontend/.env` directly — it's gitignored and overwritten.
 - **Backend env loading**: `app/main.py` explicitly loads root `.env` via `python-dotenv` (`Path(__file__).resolve().parent.parent.parent / ".env"`). The pydantic Settings class also reads `../.env`.
 - **MAPBOX_API_KEY vs MAPBOX_ACCESS_TOKEN**: The env var is `MAPBOX_API_KEY` everywhere. `app/config.py` aliases it to `MAPBOX_ACCESS_TOKEN` via `validation_alias`.
-- **SUPABASE_SECRET_KEY** (env var) maps to `SUPABASE_SECRET_KEY` in Settings — note the `.env.example` also says `SUPABASE_SECRET_KEY`, but Docker compose and config use this same name.
+- **Postgres**: Docker Compose provides `postgres` and `pgadmin`. Local non-Docker runs use `DATABASE_URL`, defaulting to `postgresql://argus:argus@localhost:5432/argus`.
 - **Python 3.13+ required**, Node 20+ required.
 - **async tests**: Uses `pytest-asyncio` with `asyncio_mode = "auto"`. Test services by patching `app.routes.<route>.<module>.<func>` with `AsyncMock`.
 

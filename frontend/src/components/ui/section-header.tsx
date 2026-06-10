@@ -9,12 +9,8 @@ interface SectionHeaderProps {
 export default function SectionHeader({ title, subtitle, className }: SectionHeaderProps) {
   return (
     <div className={cn("space-y-1", className)}>
-      <h2 className="font-heading text-xl font-semibold text-foreground tracking-tight">
-        {title}
-      </h2>
-      {subtitle && (
-        <p className="text-sm text-muted-foreground">{subtitle}</p>
-      )}
+      <h2 className="font-heading text-xl font-semibold text-foreground tracking-tight">{title}</h2>
+      {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
     </div>
   );
 }

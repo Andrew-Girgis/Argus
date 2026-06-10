@@ -109,7 +109,8 @@
   --accent-glow: rgba(99, 102, 241, 0.3);
 
   --neu-flat: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light);
-  --neu-pressed: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light);
+  --neu-pressed:
+    inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light);
   --neu-elevated: 10px 10px 20px var(--neu-shadow-dark), -10px -10px 20px var(--neu-shadow-light);
   --neu-glow: 0 0 8px var(--accent-glow);
 
@@ -180,7 +181,8 @@
 
   /* Neumorphic shadow scale */
   --neu-flat: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light);
-  --neu-pressed: inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light);
+  --neu-pressed:
+    inset 3px 3px 6px var(--neu-shadow-dark), inset -3px -3px 6px var(--neu-shadow-light);
   --neu-elevated: 10px 10px 20px var(--neu-shadow-dark), -10px -10px 20px var(--neu-shadow-light);
   --neu-glow: 0 0 8px var(--accent-glow);
 
@@ -204,13 +206,24 @@
 
 /* ===== Argus Panoptes Animations ===== */
 @keyframes argus-pulse {
-  0%, 100% { box-shadow: 0 0 8px var(--accent-glow); }
-  50% { box-shadow: 0 0 16px var(--accent-glow), 0 0 32px var(--accent-glow); }
+  0%,
+  100% {
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+  50% {
+    box-shadow:
+      0 0 16px var(--accent-glow),
+      0 0 32px var(--accent-glow);
+  }
 }
 
 @keyframes argus-scan {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ===== Base Layer ===== */

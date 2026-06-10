@@ -92,10 +92,32 @@ export interface PropertyResponse {
   geospatial: GeospatialData | null;
 }
 
+export interface SegmentTarget {
+  type: string;
+  prompt: string;
+}
+
+export interface SegmentPayload {
+  image_url: string;
+  image_type: "satellite" | "street_view";
+  targets: SegmentTarget[];
+}
+
+export interface SegmentResult {
+  data: Record<string, unknown> | null;
+  error: string | null;
+  source: string;
+}
+
 export interface ServiceResult<T = unknown> {
   data: T | null;
   error: string | null;
   source: string;
+}
+
+export interface ImageFetchResponse {
+  street_view: ServiceResult<{ url: string }>;
+  satellite: ServiceResult<{ url: string }>;
 }
 
 export interface FeedbackPayload {

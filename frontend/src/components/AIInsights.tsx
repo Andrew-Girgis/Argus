@@ -98,7 +98,10 @@ function CorrectionInput({
           <button
             key={opt}
             type="button"
-            onClick={(e) => { e.stopPropagation(); onChange(opt); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange(opt);
+            }}
             className={`flex-1 rounded-md py-1 text-xs font-medium transition-colors ${
               value === opt
                 ? "bg-primary text-primary-foreground"
@@ -116,13 +119,18 @@ function CorrectionInput({
     return (
       <select
         value={value}
-        onChange={(e) => { e.stopPropagation(); onChange(e.target.value); }}
+        onChange={(e) => {
+          e.stopPropagation();
+          onChange(e.target.value);
+        }}
         onClick={(e) => e.stopPropagation()}
         className="w-full rounded-md bg-background px-2 py-1 text-xs text-foreground border border-border focus:outline-none"
       >
         <option value="">Select…</option>
         {fieldMeta.options.map((opt) => (
-          <option key={opt} value={opt}>{opt}</option>
+          <option key={opt} value={opt}>
+            {opt}
+          </option>
         ))}
       </select>
     );
@@ -133,7 +141,10 @@ function CorrectionInput({
       <input
         type="number"
         value={value}
-        onChange={(e) => { e.stopPropagation(); onChange(e.target.value); }}
+        onChange={(e) => {
+          e.stopPropagation();
+          onChange(e.target.value);
+        }}
         onClick={(e) => e.stopPropagation()}
         className="w-full rounded-md bg-background px-2 py-1 text-xs text-foreground border border-border focus:outline-none"
         placeholder="Enter number"
@@ -145,7 +156,10 @@ function CorrectionInput({
     <input
       type="text"
       value={value}
-      onChange={(e) => { e.stopPropagation(); onChange(e.target.value); }}
+      onChange={(e) => {
+        e.stopPropagation();
+        onChange(e.target.value);
+      }}
       onClick={(e) => e.stopPropagation()}
       className="w-full rounded-md bg-background px-2 py-1 text-xs text-foreground border border-border focus:outline-none"
       placeholder="Correct value"
@@ -153,7 +167,17 @@ function CorrectionInput({
   );
 }
 
-function InsightCard({ icon, title, children, loading, confidence, aiValue, fieldMeta, analysisId, propertyId }: InsightCardProps) {
+function InsightCard({
+  icon,
+  title,
+  children,
+  loading,
+  confidence,
+  aiValue,
+  fieldMeta,
+  analysisId,
+  propertyId,
+}: InsightCardProps) {
   const [flipped, setFlipped] = useState(false);
   const [correcting, setCorrecting] = useState(false);
   const [correctedValue, setCorrectedValue] = useState<string>("");
@@ -174,7 +198,11 @@ function InsightCard({ icon, title, children, loading, confidence, aiValue, fiel
         ai_confidence: confidence ?? null,
         corrected_value:
           fieldMeta.fieldType === "boolean"
-            ? correctedValue === "true" ? true : correctedValue === "false" ? false : null
+            ? correctedValue === "true"
+              ? true
+              : correctedValue === "false"
+                ? false
+                : null
             : fieldMeta.fieldType === "number"
               ? Number(correctedValue)
               : correctedValue,
@@ -196,10 +224,13 @@ function InsightCard({ icon, title, children, loading, confidence, aiValue, fiel
   const hasConfidence = confidence != null;
   const pct = hasConfidence ? Math.round(confidence * 100) : null;
   const confidenceLabel =
-    confidence == null ? null
-    : confidence >= 0.8 ? "High confidence"
-    : confidence >= 0.6 ? "Moderate confidence"
-    : "Low confidence";
+    confidence == null
+      ? null
+      : confidence >= 0.8
+        ? "High confidence"
+        : confidence >= 0.6
+          ? "Moderate confidence"
+          : "Low confidence";
 
   return (
     <div
@@ -240,11 +271,19 @@ function InsightCard({ icon, title, children, loading, confidence, aiValue, fiel
           {submitted ? (
             <p className="text-xs font-semibold text-primary">Saved — thanks!</p>
           ) : correcting ? (
-            <form onSubmit={handleSubmit} className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
+            <form
+              onSubmit={handleSubmit}
+              className="w-full space-y-2"
+              onClick={(e) => e.stopPropagation()}
+            >
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Correct value
               </p>
-              <CorrectionInput fieldMeta={fieldMeta} value={correctedValue} onChange={setCorrectedValue} />
+              <CorrectionInput
+                fieldMeta={fieldMeta}
+                value={correctedValue}
+                onChange={setCorrectedValue}
+              />
               <input
                 type="text"
                 value={notes}
@@ -263,7 +302,10 @@ function InsightCard({ icon, title, children, loading, confidence, aiValue, fiel
                 </button>
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); setCorrecting(false); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCorrecting(false);
+                  }}
                   className="flex-1 rounded-md bg-background py-1 text-xs font-medium text-muted-foreground border border-border"
                 >
                   Cancel
@@ -282,7 +324,12 @@ function InsightCard({ icon, title, children, loading, confidence, aiValue, fiel
               <p className="text-xs text-muted-foreground">{confidenceLabel}</p>
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setCorrecting(true); setCorrectedValue(""); setNotes(""); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCorrecting(true);
+                  setCorrectedValue("");
+                  setNotes("");
+                }}
                 className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors mt-1"
               >
                 Correct this
@@ -304,7 +351,19 @@ export default function AIInsights({ analysis, loading, analysisId, propertyId }
         loading={loading}
         confidence={analysis?.property_type_confidence}
         aiValue={analysis?.property_type}
-        fieldMeta={{ fieldName: "property_type", fieldType: "enum", options: ["Detached","Semi-Detached","Townhouse","Condo","Duplex","Triplex","Other"] }}
+        fieldMeta={{
+          fieldName: "property_type",
+          fieldType: "enum",
+          options: [
+            "Detached",
+            "Semi-Detached",
+            "Townhouse",
+            "Condo",
+            "Duplex",
+            "Triplex",
+            "Other",
+          ],
+        }}
         analysisId={analysisId}
         propertyId={propertyId}
       >
@@ -330,7 +389,11 @@ export default function AIInsights({ analysis, loading, analysisId, propertyId }
         loading={loading}
         confidence={analysis?.stories_confidence}
         aiValue={analysis?.stories}
-        fieldMeta={{ fieldName: "stories", fieldType: "enum", options: ["1","1.5","2","2.5","3","Split-level"] }}
+        fieldMeta={{
+          fieldName: "stories",
+          fieldType: "enum",
+          options: ["1", "1.5", "2", "2.5", "3", "Split-level"],
+        }}
         analysisId={analysisId}
         propertyId={propertyId}
       >
@@ -343,7 +406,11 @@ export default function AIInsights({ analysis, loading, analysisId, propertyId }
         loading={loading}
         confidence={analysis?.exterior_material_confidence}
         aiValue={analysis?.exterior_material}
-        fieldMeta={{ fieldName: "exterior_material", fieldType: "enum", options: ["Brick","Vinyl Siding","Stone","Stucco","Wood","Aluminum","Mixed"] }}
+        fieldMeta={{
+          fieldName: "exterior_material",
+          fieldType: "enum",
+          options: ["Brick", "Vinyl Siding", "Stone", "Stucco", "Wood", "Aluminum", "Mixed"],
+        }}
         analysisId={analysisId}
         propertyId={propertyId}
       >
@@ -356,7 +423,18 @@ export default function AIInsights({ analysis, loading, analysisId, propertyId }
         loading={loading}
         confidence={analysis?.parking_type_confidence}
         aiValue={analysis?.parking_type}
-        fieldMeta={{ fieldName: "parking_type", fieldType: "enum", options: ["Attached Garage","Detached Garage","Carport","Driveway Only","Street","None visible"] }}
+        fieldMeta={{
+          fieldName: "parking_type",
+          fieldType: "enum",
+          options: [
+            "Attached Garage",
+            "Detached Garage",
+            "Carport",
+            "Driveway Only",
+            "Street",
+            "None visible",
+          ],
+        }}
         analysisId={analysisId}
         propertyId={propertyId}
       >
@@ -415,7 +493,11 @@ export default function AIInsights({ analysis, loading, analysisId, propertyId }
         loading={loading}
         confidence={analysis?.lot_shape_confidence}
         aiValue={analysis?.lot_shape}
-        fieldMeta={{ fieldName: "lot_shape", fieldType: "enum", options: ["Regular","Pie-Shaped","Corner","Irregular","Cul-de-sac"] }}
+        fieldMeta={{
+          fieldName: "lot_shape",
+          fieldType: "enum",
+          options: ["Regular", "Pie-Shaped", "Corner", "Irregular", "Cul-de-sac"],
+        }}
         analysisId={analysisId}
         propertyId={propertyId}
       >
@@ -428,7 +510,11 @@ export default function AIInsights({ analysis, loading, analysisId, propertyId }
         loading={loading}
         confidence={analysis?.condition_confidence}
         aiValue={analysis?.condition_estimate}
-        fieldMeta={{ fieldName: "condition_estimate", fieldType: "enum", options: ["Excellent","Good","Fair","Poor"] }}
+        fieldMeta={{
+          fieldName: "condition_estimate",
+          fieldType: "enum",
+          options: ["Excellent", "Good", "Fair", "Poor"],
+        }}
         analysisId={analysisId}
         propertyId={propertyId}
       >
@@ -441,7 +527,11 @@ export default function AIInsights({ analysis, loading, analysisId, propertyId }
         loading={loading}
         confidence={analysis?.approximate_age_confidence}
         aiValue={analysis?.approximate_age}
-        fieldMeta={{ fieldName: "approximate_age", fieldType: "enum", options: ["0-5 years","5-15 years","16-30 years","30-50 years","50+ years"] }}
+        fieldMeta={{
+          fieldName: "approximate_age",
+          fieldType: "enum",
+          options: ["0-5 years", "5-15 years", "16-30 years", "30-50 years", "50+ years"],
+        }}
         analysisId={analysisId}
         propertyId={propertyId}
       >
@@ -467,7 +557,20 @@ export default function AIInsights({ analysis, loading, analysisId, propertyId }
         loading={loading}
         confidence={analysis?.roof_type_confidence}
         aiValue={analysis?.roof_type}
-        fieldMeta={{ fieldName: "roof_type", fieldType: "enum", options: ["Gable","Clipped Gable","Dutch Gable","Gambrel","Hip","Mansard","Shed","Flat"] }}
+        fieldMeta={{
+          fieldName: "roof_type",
+          fieldType: "enum",
+          options: [
+            "Gable",
+            "Clipped Gable",
+            "Dutch Gable",
+            "Gambrel",
+            "Hip",
+            "Mansard",
+            "Shed",
+            "Flat",
+          ],
+        }}
         analysisId={analysisId}
         propertyId={propertyId}
       >
@@ -493,7 +596,11 @@ export default function AIInsights({ analysis, loading, analysisId, propertyId }
         loading={loading}
         confidence={analysis?.driveway_material_confidence}
         aiValue={analysis?.driveway_material}
-        fieldMeta={{ fieldName: "driveway_material", fieldType: "enum", options: ["Concrete","Asphalt","Interlock/Paving Stone","Gravel","None visible"] }}
+        fieldMeta={{
+          fieldName: "driveway_material",
+          fieldType: "enum",
+          options: ["Concrete", "Asphalt", "Interlock/Paving Stone", "Gravel", "None visible"],
+        }}
         analysisId={analysisId}
         propertyId={propertyId}
       >

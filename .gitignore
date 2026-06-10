@@ -38,3 +38,6 @@ inspo/
 # OS
 .DS_Store
 Thumbs.db
+
+# s: encrypted secrets
+.senv

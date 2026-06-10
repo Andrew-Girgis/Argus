@@ -62,6 +62,7 @@ async def fetch_satellite(lat: float, lon: float) -> ServiceResult:
             "zoom": "19",
             "size": "640x640",
             "maptype": "satellite",
+            "markers": f"color:red|{lat},{lon}",
             "key": settings.GOOGLE_MAPS_API_KEY,
         }
         url = f"{STATIC_MAP_BASE}?{urlencode(params)}"

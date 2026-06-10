@@ -5,8 +5,8 @@ Full-stack application that takes a street address or lat/long and returns a com
 ## Tech Stack
 
 - **Frontend:** React + Vite, shadcn/ui, Tailwind CSS, react-map-gl, Recharts, TanStack Query
-- **Backend:** Python FastAPI, OpenAI Vision (gpt-4o), SAM2 segmentation, Supabase
-- **Infrastructure:** Docker Compose
+- **Backend:** Python FastAPI, OpenAI Vision, Postgres cache/persistence, optional SAM 3.1 segmentation
+- **Infrastructure:** Docker Compose with Postgres and pgAdmin
 
 ## Local Setup
 
@@ -15,7 +15,7 @@ Full-stack application that takes a street address or lat/long and returns a com
 - Node.js 20+
 - Python 3.13+
 - [uv](https://docs.astral.sh/uv/) (Python package manager)
-- Docker (optional)
+- Docker (required for Postgres/pgAdmin; optional for local-only frontend/backend)
 
 ### 1. Clone the repo
 
@@ -29,6 +29,12 @@ cd Argus
 ```bash
 cp .env.example .env
 # Fill in your API keys in .env
+```
+
+For secrets, prefer runtime injection with `s env` instead of committing local values:
+
+```bash
+s env OPENAI_API_KEY LANGFUSE_PUBLIC_KEY LANGFUSE_SECRET_KEY LANGFUSE_BASE_URL -- make backend
 ```
 
 ### 3. Run the app
@@ -59,6 +65,25 @@ docker compose up --build
 | Frontend | http://localhost:5173         |
 | Backend  | http://localhost:8000         |
 | API Docs | http://localhost:8000/docs    |
+| pgAdmin  | http://localhost:5050         |
+
+SAM 3.1 is behind a Compose profile because it requires gated Hugging Face checkpoint access and CUDA-capable hardware:
+
+```bash
+make sam
+```
+
+When running the backend locally with `make backend`, use the local SAM URL:
+
+```bash
+make backend-sam
+```
+
+When running the backend inside Docker Compose, use the Docker service URL:
+
+```bash
+SAM_SERVICE_URL=http://sam:8100 s HF_TOKEN -- docker compose --profile sam up --build
+```
 
 ## Environment Variables
 
@@ -66,22 +91,23 @@ docker compose up --build
 |-----------------------------|----------------------------------------------|------------------------------------------------------|
 | `GOOGLE_MAPS_API_KEY`       | Street View, Satellite imagery, Geocoding    | [Google Cloud Console](https://console.cloud.google.com/) |
 | `MAPBOX_API_KEY`            | Map display and geocoding in the frontend    | [Mapbox Account](https://account.mapbox.com/)        |
-| `OPENAI_API_KEY`            | GPT-4o Vision for property image analysis    | [OpenAI Platform](https://platform.openai.com/)     |
-| `SUPABASE_URL`              | PostgreSQL database URL                      | [Supabase Dashboard](https://supabase.com/dashboard) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role key (server-side only) | [Supabase Dashboard](https://supabase.com/dashboard) |
+| `OPENAI_API_KEY`            | Vision/property intelligence analysis        | [OpenAI Platform](https://platform.openai.com/)      |
+| `OPENAI_VISION_MODEL`       | Configurable OpenAI model for image analysis | OpenAI model name                                    |
+| `DATABASE_URL`              | Backend Postgres connection URL              | Local/Docker Postgres                                |
+| `LANGFUSE_*`                | External Langfuse Cloud tracing              | Langfuse project settings                            |
+| `HF_TOKEN`                  | Gated SAM 3.1 checkpoint access              | Hugging Face settings                                |
 
 ## API Reference
 
 ### `POST /api/v1/property`
 
-Full property analysis pipeline. Fetches imagery, runs AI analysis, computes isochrones, and finds nearby POIs.
+Full property analysis pipeline. Reverse geocodes coordinates, checks the Postgres cache by normalized address, fetches imagery on cache miss/stale, runs AI analysis, optionally calls SAM segmentation, and finds nearby POIs.
 
 **Request:**
 ```json
 {
-  "address": "123 Main St, Toronto, ON",
   "lat": 43.6532,
-  "lng": -79.3832
+  "lon": -79.3832
 }
 ```
 
@@ -140,10 +166,10 @@ Health check endpoint.
 | Source | Purpose | Key required? |
 |--------|---------|---------------|
 | Google Maps Static API | Street View + Satellite imagery | Yes |
-| OpenAI Vision API | Property image analysis (gpt-4o) | Yes |
-| SAM2 | Image segmentation | No (runs locally) |
+| OpenAI Vision API | Property image analysis | Yes |
+| SAM 3.1 | Optional text-prompted segmentation | HF token + local GPU for full service |
 | Overpass API / OpenStreetMap | Nearby POIs | No |
-| Supabase | PostgreSQL persistence | Yes |
+| Postgres | Cache and persistence | Docker/local DB |
 
 ## Project Structure
 
@@ -160,6 +186,7 @@ Argus/
 │   │       └── __init__.py
 │   ├── Dockerfile
 │   └── pyproject.toml
+├── sam-service/             # Optional SAM 3.1 service contract
 ├── frontend/               # React + Vite app (to be scaffolded)
 ├── .env.example
 ├── .gitignore

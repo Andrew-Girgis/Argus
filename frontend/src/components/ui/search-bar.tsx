@@ -77,9 +77,7 @@ export default function SearchBar({ onSearch, className }: SearchBarProps) {
           </button>
         </div>
       </form>
-      {error && (
-        <p className="mt-3 text-sm text-destructive text-center">{error}</p>
-      )}
+      {error && <p className="mt-3 text-sm text-destructive text-center">{error}</p>}
     </div>
   );
 }
