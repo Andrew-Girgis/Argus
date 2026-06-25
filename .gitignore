@@ -23,6 +23,7 @@ frontend/dist/
 # Claude Code
 .claude/
 .superpowers/
+.worktrees/
 
 # Models
 models/
