@@ -117,6 +117,8 @@ class SegmentRequest(BaseModel):
     image_url: str
     image_type: str = "satellite"
     targets: list[SegmentTarget] | None = None
+    guidance_mode: str = "text"
+    center_box_scales: list[float] | None = None
 
 
 class ServiceResult(BaseModel):

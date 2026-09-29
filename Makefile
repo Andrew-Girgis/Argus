@@ -7,7 +7,7 @@ export
 dev: install env
 	@echo "Starting Argus..."
 	@trap 'kill 0' EXIT; \
-	cd backend && uv run python -m uvicorn app.main:app --reload & \
+	cd backend && uv run python -m uvicorn app.main:app --reload --host 0.0.0.0 & \
 	cd frontend && ~/.vite-plus/bin/vp dev & \
 	wait
 
@@ -24,16 +24,16 @@ install:
 
 # Run backend only
 backend:
-	cd backend && uv run python -m uvicorn app.main:app --reload
+	cd backend && uv run python -m uvicorn app.main:app --reload --host 0.0.0.0
 
 # Run backend with local Docker SAM service enabled
 backend-sam:
-	cd backend && SAM_SERVICE_URL=http://localhost:8100 uv run python -m uvicorn app.main:app --reload
+	cd backend && SAM_SERVICE_URL=http://localhost:8100 uv run python -m uvicorn app.main:app --reload --host 0.0.0.0
 
-# Run optional SAM service only. Requires HF_TOKEN in s.
+# Run optional SAM service only. Requires HF_TOKEN in .env.
 sam:
-	s HF_TOKEN -- docker compose --profile sam build --no-cache sam
-	s HF_TOKEN -- docker compose --profile sam up --force-recreate sam
+	docker compose --profile sam build sam
+	docker compose --profile sam up --force-recreate sam
 
 # Run frontend only
 frontend: env

@@ -14,7 +14,7 @@ RUN python3.12 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir fastapi uvicorn[standard] httpx pillow huggingface-hub einops ninja \
+    && pip install --no-cache-dir fastapi uvicorn[standard] httpx pillow huggingface-hub einops ninja pycocotools psutil \
     && pip install --no-cache-dir torch==2.10.0 torchvision --index-url https://download.pytorch.org/whl/cu128
 
 # Install current SAM 3 code. Checkpoints are gated and should be downloaded at runtime

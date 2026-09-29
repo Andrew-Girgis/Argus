@@ -40,6 +40,8 @@ async def segment_image(
     image_url: str,
     image_type: str = "satellite",
     targets: list[dict[str, str]] | None = None,
+    guidance_mode: str = "text",
+    center_box_scales: list[float] | None = None,
 ) -> ServiceResult:
     """Segment a property image using the local SAM 3.1 service if configured."""
     if not settings.SAM_SERVICE_URL:
@@ -62,6 +64,8 @@ async def segment_image(
                     "image_url": image_url,
                     "image_type": image_type,
                     "targets": selected_targets,
+                    "guidance_mode": guidance_mode,
+                    "center_box_scales": center_box_scales,
                 },
             )
             response.raise_for_status()
@@ -81,6 +85,7 @@ async def segment_image(
                 "model": settings.SAM_MODEL_ID,
                 "image_url": image_url,
                 "targets": selected_targets,
+                "guidance_mode": guidance_mode,
             },
             error=None,
             source="sam3",

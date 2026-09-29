@@ -101,6 +101,8 @@ export interface SegmentPayload {
   image_url: string;
   image_type: "satellite" | "street_view";
   targets: SegmentTarget[];
+  guidance_mode?: "text" | "center_boxes";
+  center_box_scales?: number[];
 }
 
 export interface SegmentResult {

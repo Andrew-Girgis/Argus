@@ -2,9 +2,11 @@ import base64
 import io
 import logging
 import os
+from contextlib import nullcontext
 from typing import Any
 
 import httpx
+import torch
 from fastapi import FastAPI
 from PIL import Image
 from pydantic import BaseModel, Field
@@ -15,6 +17,7 @@ app = FastAPI(title="Argus SAM 3.1 Service")
 
 SAM_MODEL_ID = os.getenv("SAM_MODEL_ID", "facebook/sam3.1")
 SAM_DEVICE = os.getenv("SAM_DEVICE", "auto")
+SAM_DTYPE = os.getenv("SAM_DTYPE", "float32")
 SAM_CONFIDENCE_THRESHOLD = float(os.getenv("SAM_CONFIDENCE_THRESHOLD", "0.5"))
 SAM_MAX_MASKS_PER_TARGET = int(os.getenv("SAM_MAX_MASKS_PER_TARGET", "3"))
 _processor: Any | None = None
@@ -50,6 +53,12 @@ async def load_model() -> None:
             load_from_HF=False,
             eval_mode=True,
         )
+        if SAM_DTYPE == "bfloat16":
+            model = model.to(dtype=torch.bfloat16)
+        elif SAM_DTYPE == "float16":
+            model = model.to(dtype=torch.float16)
+        else:
+            model = model.to(dtype=torch.float32)
         _processor = Sam3Processor(
             model,
             device=_device,
@@ -72,6 +81,8 @@ class SegmentRequest(BaseModel):
     image_url: str
     image_type: str = "satellite"
     targets: list[SegmentTarget] = Field(default_factory=list)
+    guidance_mode: str = "text"
+    center_box_scales: list[float] | None = None
 
 
 @app.get("/health")
@@ -108,15 +119,55 @@ async def segment(req: SegmentRequest) -> dict[str, Any]:
         response.raise_for_status()
 
     image = Image.open(io.BytesIO(response.content)).convert("RGB")
-    inference_state = _processor.set_image(image)
+    inference_context = (
+        torch.autocast(device_type="cuda", dtype=torch.bfloat16)
+        if _device == "cuda"
+        else nullcontext()
+    )
+    with inference_context:
+        inference_state = _processor.set_image(image)
+
+    if req.guidance_mode == "center_boxes":
+        scales = req.center_box_scales or [0.12, 0.18, 0.26, 0.36, 0.5]
+        target = SegmentTarget(
+            type="center_guided_home",
+            prompt="object containing the center property coordinate",
+        )
+        candidates: list[dict[str, Any]] = []
+        for scale in scales:
+            target_state = dict(inference_state)
+            with inference_context:
+                output = _processor.add_geometric_prompt(
+                    box=[0.5, 0.5, scale, scale],
+                    label=True,
+                    state=target_state,
+                )
+            for segment in _serialize_target_output(image, target, output):
+                segment["center_box_scale"] = scale
+                candidates.append(segment)
+
+        ranked_segments = sorted(candidates, key=_guided_segment_score, reverse=True)
+        selected_segments = ranked_segments[:1]
+        return {
+            "status": "ok",
+            "model": SAM_MODEL_ID,
+            "device": _device,
+            "guidance_mode": req.guidance_mode,
+            "segment_count": len(selected_segments),
+            "segments": selected_segments,
+            "candidate_count": len(candidates),
+            "center_box_scales": scales,
+        }
+
     segments: list[dict[str, Any]] = []
 
     for target in req.targets:
         target_state = dict(inference_state)
-        output = _processor.set_text_prompt(
-            state=target_state,
-            prompt=target.prompt,
-        )
+        with inference_context:
+            output = _processor.set_text_prompt(
+                state=target_state,
+                prompt=target.prompt,
+            )
         segments.extend(_serialize_target_output(image, target, output))
 
     return {
@@ -166,6 +217,20 @@ def _serialize_target_output(
             }
         )
     return serialized
+
+
+def _guided_segment_score(segment: dict[str, Any]) -> float:
+    score = float(segment.get("score", 0.0))
+    bbox = segment.get("bbox") or [0, 0, 0, 0]
+    if len(bbox) != 4:
+        return score
+    x0, y0, x1, y1 = [float(value) for value in bbox]
+    contains_center = x0 <= 320 <= x1 and y0 <= 320 <= y1
+    width = max(x1 - x0, 1.0)
+    height = max(y1 - y0, 1.0)
+    area_fraction = (width * height) / (640 * 640)
+    size_penalty = abs(area_fraction - 0.12)
+    return score + (0.25 if contains_center else -0.25) - size_penalty
 
 
 def _mask_data_url(mask_bool: Any) -> str:

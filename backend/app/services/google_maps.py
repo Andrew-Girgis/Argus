@@ -54,17 +54,20 @@ async def fetch_street_view(
         )
 
 
-async def fetch_satellite(lat: float, lon: float) -> ServiceResult:
+async def fetch_satellite(
+    lat: float, lon: float, zoom: int = 20, include_marker: bool = False
+) -> ServiceResult:
     """Fetch a Google Static Maps satellite image URL for the given coordinates."""
     try:
         params = {
             "center": f"{lat},{lon}",
-            "zoom": "19",
+            "zoom": str(zoom),
             "size": "640x640",
             "maptype": "satellite",
-            "markers": f"color:red|{lat},{lon}",
             "key": settings.GOOGLE_MAPS_API_KEY,
         }
+        if include_marker:
+            params["markers"] = f"color:red|{lat},{lon}"
         url = f"{STATIC_MAP_BASE}?{urlencode(params)}"
 
         return ServiceResult(

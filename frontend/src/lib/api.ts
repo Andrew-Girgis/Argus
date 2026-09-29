@@ -6,7 +6,11 @@ import type {
   SegmentResult,
 } from "@/lib/types";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const configuredApiUrl = import.meta.env.VITE_API_URL;
+const API_URL =
+  configuredApiUrl === "http://localhost:8000" && window.location.hostname !== "localhost"
+    ? `http://${window.location.hostname}:8000`
+    : configuredApiUrl || "http://localhost:8000";
 
 const api = axios.create({ baseURL: API_URL });
 
@@ -15,8 +19,12 @@ export async function fetchProperty(lat: number, lon: number) {
   return data;
 }
 
-export async function fetchImages(lat: number, lon: number): Promise<ImageFetchResponse> {
-  const { data } = await api.get("/api/v1/property/images", { params: { lat, lon } });
+export async function fetchImages(
+  lat: number,
+  lon: number,
+  zoom?: number,
+): Promise<ImageFetchResponse> {
+  const { data } = await api.get("/api/v1/property/images", { params: { lat, lon, zoom } });
   return data;
 }
 

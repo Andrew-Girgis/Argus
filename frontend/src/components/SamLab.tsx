@@ -43,11 +43,15 @@ export default function SamLab() {
   const [satelliteUrl, setSatelliteUrl] = useState("");
   const [streetViewUrl, setStreetViewUrl] = useState("");
   const [imageType, setImageType] = useState<SegmentPayload["image_type"]>("satellite");
+  const [satelliteZoom, setSatelliteZoom] = useState(20);
+  const [guidanceMode, setGuidanceMode] = useState<"text" | "center_boxes">("center_boxes");
+  const [lastCoordinates, setLastCoordinates] = useState<{ lat: number; lon: number } | null>(null);
   const [targets, setTargets] = useState<SegmentTarget[]>(SATELLITE_TARGETS);
   const [imageError, setImageError] = useState<string | null>(null);
 
   const imageMutation = useMutation({
-    mutationFn: ({ lat, lon }: { lat: number; lon: number }) => fetchImages(lat, lon),
+    mutationFn: ({ lat, lon, zoom }: { lat: number; lon: number; zoom: number }) =>
+      fetchImages(lat, lon, zoom),
   });
 
   const segmentMutation = useMutation<SegmentResult, Error, SegmentPayload>({
@@ -62,35 +66,62 @@ export default function SamLab() {
 
   async function handleAddressSearch(lat: number, lon: number, resolvedAddress: string) {
     setAddress(resolvedAddress);
+    setLastCoordinates({ lat, lon });
     setImageError(null);
     segmentMutation.reset();
 
     try {
-      const images = await imageMutation.mutateAsync({ lat, lon });
-      const nextSatelliteUrl = images.satellite.data?.url ?? "";
-      const nextStreetViewUrl = images.street_view.data?.url ?? "";
-      setSatelliteUrl(nextSatelliteUrl);
-      setStreetViewUrl(nextStreetViewUrl);
-
-      const selectedType = nextSatelliteUrl ? "satellite" : "street_view";
-      const selectedUrl = nextSatelliteUrl || nextStreetViewUrl;
-      if (!selectedUrl) {
-        setImageError(
-          images.satellite.error ||
-            images.street_view.error ||
-            "No Street View or satellite image was returned.",
-        );
-        return;
-      }
-
-      setImageType(selectedType);
-      const selectedTargets =
-        selectedType === "satellite" ? SATELLITE_TARGETS : STREET_VIEW_TARGETS;
-      setTargets(selectedTargets);
-      setImageUrl(selectedUrl);
-      runSegmentationFor(selectedUrl, selectedType, selectedTargets);
+      await fetchImagesForCoordinates(lat, lon, satelliteZoom, true);
     } catch (error) {
       setImageError(error instanceof Error ? error.message : "Failed to fetch imagery for SAM.");
+    }
+  }
+
+  async function fetchImagesForCoordinates(
+    lat: number,
+    lon: number,
+    zoom: number,
+    runAfterFetch: boolean,
+  ) {
+    const images = await imageMutation.mutateAsync({ lat, lon, zoom });
+    const nextSatelliteUrl = images.satellite.data?.url ?? "";
+    const nextStreetViewUrl = images.street_view.data?.url ?? "";
+    setSatelliteUrl(nextSatelliteUrl);
+    setStreetViewUrl(nextStreetViewUrl);
+
+    const selectedType = nextSatelliteUrl ? "satellite" : "street_view";
+    const selectedUrl = nextSatelliteUrl || nextStreetViewUrl;
+    if (!selectedUrl) {
+      setImageError(
+        images.satellite.error ||
+          images.street_view.error ||
+          "No Street View or satellite image was returned.",
+      );
+      return;
+    }
+
+    setImageType(selectedType);
+    const selectedTargets = selectedType === "satellite" ? SATELLITE_TARGETS : STREET_VIEW_TARGETS;
+    setTargets(selectedTargets);
+    setImageUrl(selectedUrl);
+    if (runAfterFetch) {
+      runSegmentationFor(selectedUrl, selectedType, selectedTargets);
+    }
+  }
+
+  async function refetchSatelliteAtZoom() {
+    if (!lastCoordinates) return;
+    setImageError(null);
+    segmentMutation.reset();
+    try {
+      await fetchImagesForCoordinates(
+        lastCoordinates.lat,
+        lastCoordinates.lon,
+        satelliteZoom,
+        false,
+      );
+    } catch (error) {
+      setImageError(error instanceof Error ? error.message : "Failed to refetch imagery for SAM.");
     }
   }
 
@@ -123,6 +154,11 @@ export default function SamLab() {
       image_url: nextImageUrl,
       image_type: nextImageType,
       targets: nextTargets.filter((target) => target.type.trim() && target.prompt.trim()),
+      guidance_mode: nextImageType === "satellite" ? guidanceMode : "text",
+      center_box_scales:
+        nextImageType === "satellite" && guidanceMode === "center_boxes"
+          ? [0.12, 0.18, 0.26, 0.36, 0.5]
+          : undefined,
     });
   }
 
@@ -175,6 +211,51 @@ export default function SamLab() {
         <CardContent className="space-y-5">
           <div className="rounded-2xl border bg-background/50 p-4">
             <SearchBar onSearch={handleAddressSearch} />
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-center">
+              <div className="w-full sm:w-40">
+                <label
+                  className="text-xs font-medium text-muted-foreground"
+                  htmlFor="satellite-zoom"
+                >
+                  Satellite zoom
+                </label>
+                <Input
+                  id="satellite-zoom"
+                  type="number"
+                  min={0}
+                  max={21}
+                  value={satelliteZoom}
+                  onChange={(event) => setSatelliteZoom(Number(event.target.value))}
+                />
+              </div>
+              <div className="w-full sm:w-52">
+                <label
+                  className="text-xs font-medium text-muted-foreground"
+                  htmlFor="sam-guidance-mode"
+                >
+                  Satellite SAM mode
+                </label>
+                <select
+                  id="sam-guidance-mode"
+                  value={guidanceMode}
+                  className="h-10 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                  onChange={(event) =>
+                    setGuidanceMode(event.target.value as "text" | "center_boxes")
+                  }
+                >
+                  <option value="center_boxes">Center guided boxes</option>
+                  <option value="text">Text only</option>
+                </select>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!lastCoordinates || imageMutation.isPending}
+                onClick={refetchSatelliteAtZoom}
+              >
+                Refetch at zoom
+              </Button>
+            </div>
             {address && (
               <p className="mt-3 text-center text-xs text-muted-foreground">
                 SAM test address: <span className="font-medium text-foreground">{address}</span>

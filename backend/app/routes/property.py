@@ -248,10 +248,11 @@ async def create_property(req: PropertyRequest):
 async def get_images(
     lat: float = Query(..., description="Latitude"),
     lon: float = Query(..., description="Longitude"),
+    zoom: int = Query(20, ge=0, le=21, description="Google Static Maps zoom level"),
 ):
     """Fetch Street View and Satellite image URLs for given coordinates."""
     sv_result = await google_maps.fetch_street_view(lat, lon)
-    sat_result = await google_maps.fetch_satellite(lat, lon)
+    sat_result = await google_maps.fetch_satellite(lat, lon, zoom=zoom)
 
     return {
         "street_view": sv_result.model_dump(),
@@ -305,6 +306,8 @@ async def segment(req: SegmentRequest):
         req.image_url,
         image_type=req.image_type,
         targets=[target.model_dump() for target in req.targets] if req.targets else None,
+        guidance_mode=req.guidance_mode,
+        center_box_scales=req.center_box_scales,
     )
     langfuse.update_current_span(
         output={
