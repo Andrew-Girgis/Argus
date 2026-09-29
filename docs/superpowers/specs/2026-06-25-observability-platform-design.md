@@ -8,7 +8,7 @@ This design intentionally separates application data from observability data. Su
 
 ## Current State
 
-The backend is a FastAPI app that fetches Google imagery, runs OpenAI Vision analysis, computes geospatial data, and writes selected results to Supabase. The frontend displays property results and maps.
+The backend is a FastAPI app that fetches Google imagery, runs LLM Vision analysis, computes geospatial data, and writes selected results to Supabase. The frontend displays property results and maps.
 
 Observability is currently partial and informal:
 

@@ -6,7 +6,8 @@ Full-stack application that takes a street address or lat/long and returns a com
 
 - **Frontend:** React + Vite, shadcn/ui, Tailwind CSS, react-map-gl, Recharts, TanStack Query
 - **Backend:** Python FastAPI, OpenAI Vision (gpt-4o), SAM2 segmentation, Supabase
-- **Infrastructure:** Docker Compose
+- **Infrastructure:** Docker Compose, PostgreSQL, MLflow, Langfuse, MinIO,
+  ClickHouse, and Redis
 
 ## Local Setup
 
@@ -15,7 +16,7 @@ Full-stack application that takes a street address or lat/long and returns a com
 - Node.js 20+
 - Python 3.13+
 - [uv](https://docs.astral.sh/uv/) (Python package manager)
-- Docker (optional)
+- Docker Desktop on macOS or Docker Engine with the Compose plugin on Linux
 
 ### 1. Clone the repo
 
@@ -47,11 +48,21 @@ Other commands:
 | `make test`   | Run backend integration tests      |
 | `make check`  | Lint, format, typecheck frontend   |
 | `make build`  | Production build frontend          |
+| `make docker-up` | Build and start the app containers |
+| `make observability` | Start MLflow and Langfuse |
+| `make observability-check` | Test both observability platforms |
+| `make dev-full` | Start the app and observability stacks |
 
 ## Docker Compose
 
+The images use multi-architecture upstream bases and do not force an CPU
+architecture, so the same files work on Apple Silicon, Intel macOS, and Linux
+hosts. Persistent data lives in named Docker volumes rather than host-specific
+paths.
+
 ```bash
-docker compose up --build
+cp .env.example .env
+make docker-up
 ```
 
 | Service  | URL                          |
@@ -59,6 +70,37 @@ docker compose up --build
 | Frontend | http://localhost:5173         |
 | Backend  | http://localhost:8000         |
 | API Docs | http://localhost:8000/docs    |
+| PostgreSQL | localhost:5432              |
+
+Validate the Compose files without starting services:
+
+```bash
+make docker-check
+```
+
+To move the project, clone it on the destination host, create its `.env`, and
+run `make docker-up`. Docker rebuilds architecture-appropriate dependencies;
+do not transfer `.venv`, `node_modules`, or Docker volumes between platforms.
+
+## Observability
+
+Runtime traces go to Langfuse. Canonical datasets and repeatable evaluation runs
+go to MLflow.
+
+```bash
+make observability-check
+```
+
+| Service | URL |
+|---------|-----|
+| Langfuse | http://localhost:3000 |
+| MLflow | http://localhost:5001 |
+| MinIO Console | http://localhost:9001 |
+
+The smoke test creates a synthetic Langfuse trace and an MLflow run/artifact
+without calling OpenAI. See `docs/experiments.md` for the full process of
+collecting reviewed cases, creating datasets, defining scorers, comparing runs,
+and promoting a candidate.
 
 ## Environment Variables
 
@@ -68,7 +110,10 @@ docker compose up --build
 | `MAPBOX_API_KEY`            | Map display and geocoding in the frontend    | [Mapbox Account](https://account.mapbox.com/)        |
 | `OPENAI_API_KEY`            | GPT-4o Vision for property image analysis    | [OpenAI Platform](https://platform.openai.com/)     |
 | `SUPABASE_URL`              | PostgreSQL database URL                      | [Supabase Dashboard](https://supabase.com/dashboard) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role key (server-side only) | [Supabase Dashboard](https://supabase.com/dashboard) |
+| `SUPABASE_SECRET_KEY`       | Supabase secret key (server-side only)      | [Supabase Dashboard](https://supabase.com/dashboard) |
+| `LANGFUSE_PUBLIC_KEY`       | Runtime trace project key                   | Local headless initialization or Langfuse settings   |
+| `LANGFUSE_SECRET_KEY`       | Runtime trace project secret                | Local headless initialization or Langfuse settings   |
+| `MLFLOW_TRACKING_URI`       | Evaluation tracking server                  | Local default is `http://localhost:5001`              |
 
 ## API Reference
 

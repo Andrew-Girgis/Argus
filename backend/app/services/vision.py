@@ -2,7 +2,7 @@ import json
 import logging
 import re
 
-from openai import AsyncOpenAI
+from langfuse.openai import AsyncOpenAI
 
 from app.config import settings
 from app.models.schemas import ServiceResult
@@ -123,6 +123,7 @@ async def analyze_property(
     satellite_url: str | None = None,
 ) -> ServiceResult:
     """Analyze property images using OpenAI Vision API (gpt-4o)."""
+    raw_text = ""
     try:
         if not street_view_url and not satellite_url:
             return ServiceResult(
@@ -156,6 +157,12 @@ async def analyze_property(
             messages=[{"role": "user", "content": content}],
             max_tokens=1500,
             temperature=0.2,
+            name="analyze-property-images",
+            metadata={
+                "workflow": "property_vision_analysis",
+                "workflow_version": settings.APP_VERSION,
+                "environment": settings.OBSERVABILITY_ENV,
+            },
         )
 
         raw_text = response.choices[0].message.content or ""

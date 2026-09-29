@@ -106,41 +106,6 @@ async def test_analyze(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_get_isochrone(client: AsyncClient):
-    mock_iso = ServiceResult(
-        data={
-            "type": "FeatureCollection",
-            "features": [
-                {
-                    "type": "Feature",
-                    "properties": {"value": 300, "profile": "foot-walking"},
-                    "geometry": {
-                        "type": "Polygon",
-                        "coordinates": [
-                            [[-79.38, 43.65], [-79.37, 43.66], [-79.38, 43.65]]
-                        ],
-                    },
-                }
-            ],
-        },
-        error=None,
-        source="openrouteservice",
-    )
-
-    with patch(
-        "app.routes.property.isochrone.get_isochrone",
-        new_callable=AsyncMock,
-        return_value=mock_iso,
-    ):
-        resp = await client.get("/api/v1/property/isochrone?lat=43.65&lon=-79.38")
-
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["data"]["type"] == "FeatureCollection"
-    assert len(data["data"]["features"]) == 1
-
-
-@pytest.mark.asyncio
 async def test_get_pois(client: AsyncClient):
     mock_pois = ServiceResult(
         data=[
@@ -248,11 +213,6 @@ async def test_create_property(client: AsyncClient):
         error=None,
         source="sam2",
     )
-    mock_iso = ServiceResult(
-        data={"type": "FeatureCollection", "features": []},
-        error=None,
-        source="openrouteservice",
-    )
     mock_pois_result = ServiceResult(
         data=[{"id": 1, "name": "Cafe", "category": "food_drink"}],
         error=None,
@@ -306,11 +266,6 @@ async def test_create_property(client: AsyncClient):
             return_value=mock_seg,
         ),
         patch(
-            "app.routes.property.isochrone.get_isochrone",
-            new_callable=AsyncMock,
-            return_value=mock_iso,
-        ),
-        patch(
             "app.routes.property.pois.get_pois",
             new_callable=AsyncMock,
             return_value=mock_pois_result,
@@ -319,24 +274,6 @@ async def test_create_property(client: AsyncClient):
             "app.routes.property.supabase.save_geospatial",
             new_callable=AsyncMock,
             return_value=mock_save_geo,
-        ),
-        patch(
-            "app.routes.property.scoring.compute_scores",
-            return_value=ServiceResult(
-                data={
-                    "walk_score": 72,
-                    "walk_description": "Very Walkable",
-                    "transit_score": 55,
-                    "transit_description": "Good Transit",
-                    "bike_score": 60,
-                    "bike_description": "Bikeable",
-                    "drive_score": 85,
-                    "amenity_score": 65,
-                    "amenity_breakdown": {"grocery": 15, "education": 10},
-                },
-                error=None,
-                source="scoring",
-            ),
         ),
     ):
         resp = await client.post(

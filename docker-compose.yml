@@ -1,25 +1,51 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${ARGUS_POSTGRES_DB:-argus}
+      POSTGRES_USER: ${ARGUS_POSTGRES_USER:-argus}
+      POSTGRES_PASSWORD: ${ARGUS_POSTGRES_PASSWORD:-argus}
+    ports:
+      - "${ARGUS_POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${ARGUS_POSTGRES_USER:-argus} -d ${ARGUS_POSTGRES_DB:-argus}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   backend:
     build: ./backend
+    init: true
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     env_file:
       - .env
-    volumes:
-      - ./backend:/app
+    environment:
+      DATABASE_URL: postgresql://${ARGUS_POSTGRES_USER:-argus}:${ARGUS_POSTGRES_PASSWORD:-argus}@postgres:5432/${ARGUS_POSTGRES_DB:-argus}
+      LANGFUSE_BASE_URL: http://langfuse-web:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
+    stop_grace_period: 10s
 
   frontend:
     build: ./frontend
+    init: true
     ports:
-      - "5173:5173"
+      - "${FRONTEND_PORT:-5173}:5173"
     environment:
       - VITE_API_URL=http://localhost:8000
       - VITE_GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
       - VITE_MAPBOX_API_KEY=${MAPBOX_API_KEY}
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
+    stop_grace_period: 10s
+
+volumes:
+  postgres_data:
