@@ -1,132 +1,63 @@
-import json
 import logging
-import re
 
 from langfuse.openai import AsyncOpenAI
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from app.config import settings
 from app.models.schemas import PropertyAnalysis, ServiceResult
 
 logger = logging.getLogger(__name__)
 
-MODEL = "gpt-4o"
+# Bump whenever INSTRUCTIONS or the PropertyAnalysis schema changes, so traces
+# and experiment runs can be compared by prompt version.
+PROMPT_VERSION = "2"
 
-ANALYSIS_PROMPT = """You are an expert property analyst. Analyze the provided property images
-(street view and/or satellite) and return a JSON object with the following fields.
+INSTRUCTIONS = """You are an expert property analyst. Analyze the provided property images
+(street view and/or satellite) and fill in every field of the response schema.
 
-IMPORTANT RULES:
-- For every field include a paired confidence score (0.0 to 1.0) reflecting how certain you are
-  based on what is visible in the images. Use 1.0 only when the evidence is unambiguous.
+Rules:
+- Pair every value with a confidence score from 0.0 to 1.0 reflecting how certain you are
+  based on what is visible. Use 1.0 only when the evidence is unambiguous.
 - If a feature is not visible or you cannot determine it with reasonable certainty, set the
-  value to null and the confidence to 0.0. Do not guess.
-- For boolean fields: use true, false, or null (cannot determine).
-- For string fields: use the listed options, or null if you cannot determine.
-- For numeric fields: use an integer, or null if you cannot determine.
+  value to null and its confidence to 0.0. Do not guess.
+- Yes/no fields: true, false, or null when you cannot determine.
+- Fields with listed options: use one of the options, or null.
 
-{
-  "property_type": "one of: Detached, Semi-Detached, Townhouse, Condo, Duplex, Triplex, Other — or null if unclear",
-  "property_type_confidence": 0.0 to 1.0,
-
-  "home_style": "architectural style (e.g., Colonial, Ranch, Tudor, Split-level, Modern, Victorian, Bungalow, Contemporary) — or null if unclear",
-  "home_style_confidence": 0.0 to 1.0,
-
-  "stories": "one of: 1, 1.5, 2, 2.5, 3, Split-level — or null if unclear",
-  "stories_confidence": 0.0 to 1.0,
-
-  "exterior_material": "primary material (e.g., Brick, Vinyl Siding, Stone, Stucco, Wood, Aluminum, Mixed) — or null if unclear",
-  "exterior_material_confidence": 0.0 to 1.0,
-
-  "has_pool": true/false/null,
-  "pool_confidence": 0.0 to 1.0,
-
-  "tree_count_estimate": integer or null,
-  "tree_count_confidence": 0.0 to 1.0,
-
-  "has_garage": true/false/null,
-  "garage_confidence": 0.0 to 1.0,
-
-  "parking_type": "one of: Attached Garage, Detached Garage, Carport, Driveway Only, Street, None visible — or null if unclear",
-  "parking_type_confidence": 0.0 to 1.0,
-
-  "parking_spaces_estimate": integer or null,
-  "parking_spaces_confidence": 0.0 to 1.0,
-
-  "condition_estimate": "one of: Excellent, Good, Fair, Poor — or null if unclear",
-  "condition_confidence": 0.0 to 1.0,
-
-  "approximate_age": "estimated age range (e.g., '0-5 years', '5-15 years', '16-30 years', '30-50 years', '50+ years') — or null if unclear",
-  "approximate_age_confidence": 0.0 to 1.0,
-
-  "lot_shape": "one of: Regular, Pie-Shaped, Corner, Irregular, Cul-de-sac — or null if unclear",
-  "lot_shape_confidence": 0.0 to 1.0,
-
-  "has_fenced_yard": true/false/null,
-  "fence_confidence": 0.0 to 1.0,
-
-  "has_solar_panels": true/false/null,
-  "solar_panels_confidence": 0.0 to 1.0,
-
-  "roof_type": "one of: Gable, Clipped Gable, Dutch Gable, Gambrel, Hip, Mansard, Shed, Flat — or null if unclear",
-  "roof_type_confidence": 0.0 to 1.0,
-
-  "has_sidewalk": true/false/null,
-  "sidewalk_confidence": 0.0 to 1.0,
-
-  "driveway_material": "one of: Concrete, Asphalt, Interlock/Paving Stone, Gravel, None visible — or null if unclear",
-  "driveway_material_confidence": 0.0 to 1.0,
-
-  "has_chimney": true/false/null,
-  "chimney_confidence": 0.0 to 1.0,
-
-  "has_deck_or_patio": true/false/null,
-  "deck_patio_confidence": 0.0 to 1.0,
-
-  "has_gutters": true/false/null,
-  "gutters_confidence": 0.0 to 1.0,
-
-  "has_detached_structure": true/false/null - sheds, workshops, or secondary structures excluding the main garage,
-  "detached_structure_confidence": 0.0 to 1.0,
-
-  "has_ac_unit": true/false/null,
-  "ac_unit_confidence": 0.0 to 1.0
-}
-
-Analyze both the street view image (for building details, exterior, garage, condition) and
-the satellite image (for lot shape, pool, trees, fencing, yard). Return ONLY valid JSON
-with no additional text or markdown formatting."""
+Use the street view image for building details, exterior, garage, and condition, and the
+satellite image for lot shape, pool, trees, fencing, and yard."""
 
 
-def _extract_json(text: str) -> dict:
-    """Extract JSON from text that may contain markdown fences or other wrapping."""
-    cleaned = text.strip()
+class VisionResult(BaseModel):
+    analysis: PropertyAnalysis
+    model: str
+    prompt_version: str
 
-    # Remove markdown code fences (```json ... ``` or ``` ... ```)
-    fence_match = re.search(r"```(?:json)?\s*\n?(.*?)```", cleaned, re.DOTALL)
-    if fence_match:
-        cleaned = fence_match.group(1).strip()
 
-    # Try direct parse
-    if cleaned:
-        try:
-            return json.loads(cleaned)
-        except json.JSONDecodeError:
-            pass
+def _model_parameters() -> dict:
+    """Request parameters, omitting optional ones that are not configured."""
+    params: dict = {"max_output_tokens": settings.VISION_MAX_OUTPUT_TOKENS}
+    if settings.VISION_TEMPERATURE is not None:
+        params["temperature"] = settings.VISION_TEMPERATURE
+    if settings.VISION_REASONING_EFFORT:
+        params["reasoning"] = {"effort": settings.VISION_REASONING_EFFORT}
+    return params
 
-    # Try finding JSON object in the text
-    brace_match = re.search(r"\{.*\}", text, re.DOTALL)
-    if brace_match:
-        return json.loads(brace_match.group(0))
 
-    raise json.JSONDecodeError("No JSON found in response", text, 0)
+def _refusal(response) -> str | None:
+    for item in response.output:
+        if item.type != "message":
+            continue
+        for part in item.content:
+            if part.type == "refusal":
+                return part.refusal
+    return None
 
 
 async def analyze_property(
     street_view_url: str | None = None,
     satellite_url: str | None = None,
 ) -> ServiceResult:
-    """Analyze property images with the OpenAI vision model."""
-    raw_text = ""
+    """Analyze property images with the configured OpenAI vision model."""
     try:
         if not street_view_url and not satellite_url:
             return ServiceResult(
@@ -137,56 +68,71 @@ async def analyze_property(
 
         client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
-        content: list[dict] = [{"type": "text", "text": ANALYSIS_PROMPT}]
+        content: list[dict] = [
+            {"type": "input_text", "text": "Analyze this property."}
+        ]
+        for url in (street_view_url, satellite_url):
+            if url:
+                content.append(
+                    {"type": "input_image", "image_url": url, "detail": "high"}
+                )
 
-        if street_view_url:
-            content.append(
-                {
-                    "type": "image_url",
-                    "image_url": {"url": street_view_url, "detail": "high"},
-                }
-            )
-
-        if satellite_url:
-            content.append(
-                {
-                    "type": "image_url",
-                    "image_url": {"url": satellite_url, "detail": "high"},
-                }
-            )
-
-        response = await client.chat.completions.create(
-            model=MODEL,
-            messages=[{"role": "user", "content": content}],
-            max_tokens=1500,
-            temperature=0.2,
+        params = _model_parameters()
+        response = await client.responses.parse(
+            model=settings.VISION_MODEL,
+            instructions=INSTRUCTIONS,
+            input=[{"role": "user", "content": content}],
+            text_format=PropertyAnalysis,
+            **params,
             name="analyze-property-images",
             metadata={
                 "workflow": "property_vision_analysis",
                 "workflow_version": settings.APP_VERSION,
                 "environment": settings.OBSERVABILITY_ENV,
+                "prompt_version": PROMPT_VERSION,
+                "model": settings.VISION_MODEL,
+                "model_parameters": params,
             },
         )
 
-        raw_text = response.choices[0].message.content or ""
-        logger.info("Vision API raw response: %s", raw_text[:500])
+        if response.status == "incomplete":
+            reason = getattr(response.incomplete_details, "reason", None)
+            return ServiceResult(
+                data=None,
+                error=f"Vision response incomplete: {reason}",
+                source="openai_vision",
+            )
 
-        analysis = PropertyAnalysis.model_validate(_extract_json(raw_text))
+        refusal = _refusal(response)
+        if refusal:
+            return ServiceResult(
+                data=None, error=f"Model refused: {refusal}", source="openai_vision"
+            )
 
-        return ServiceResult(data=analysis, error=None, source="openai_vision")
+        if response.output_parsed is None:
+            return ServiceResult(
+                data=None, error="Model returned no analysis", source="openai_vision"
+            )
 
-    except json.JSONDecodeError as exc:
-        logger.exception("Failed to parse Vision API response as JSON")
         return ServiceResult(
-            data={"raw_text": raw_text},
-            error=f"JSON parse error: {exc}",
+            data=VisionResult(
+                analysis=response.output_parsed,
+                model=response.model,
+                prompt_version=PROMPT_VERSION,
+            ),
+            error=None,
             source="openai_vision",
         )
+
     except ValidationError as exc:
-        logger.exception("Vision API response did not match the analysis schema")
+        # Structured Outputs guarantees the schema unless the output was cut off.
+        logger.exception("Vision output did not match the analysis schema")
         return ServiceResult(
-            data={"raw_text": raw_text},
-            error=f"Schema validation error: {exc}",
+            data=None,
+            error=(
+                "Vision output did not match the analysis schema (it may have been "
+                f"truncated; check VISION_MAX_OUTPUT_TOKENS): {exc}"
+            ),
             source="openai_vision",
         )
     except Exception as exc:

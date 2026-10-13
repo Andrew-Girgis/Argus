@@ -12,6 +12,13 @@ class Settings(BaseSettings):
     SUPABASE_URL: str = ""
     SUPABASE_SECRET_KEY: str = ""
 
+    # Vision model. Optional parameters are only sent when set, because newer
+    # models reject some of them (e.g. custom temperature).
+    VISION_MODEL: str = "gpt-4o"
+    VISION_MAX_OUTPUT_TOKENS: int = 4000
+    VISION_TEMPERATURE: float | None = None
+    VISION_REASONING_EFFORT: str | None = None
+
     OBSERVABILITY_ENV: str = "local"
     APP_VERSION: str = "local"
 

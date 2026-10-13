@@ -102,13 +102,30 @@ without calling OpenAI. See `docs/experiments.md` for the full process of
 collecting reviewed cases, creating datasets, defining scorers, comparing runs,
 and promoting a candidate.
 
+### Comparing vision models
+
+The vision model and its parameters come from `VISION_*` settings (see
+Environment Variables). Each vision call is traced as `analyze-property-images`
+with the model, `prompt_version`, and request parameters in its metadata. The
+analysis row stores the exact model snapshot OpenAI reports in `model_used`.
+Bump `PROMPT_VERSION` in `backend/app/services/vision.py` whenever the
+instructions or the `PropertyAnalysis` schema change.
+
+Langfuse calculates cost from its model price table. If a newer model shows a
+cost of $0, add a custom model definition with its prices under Project
+Settings → Models in Langfuse.
+
 ## Environment Variables
 
 | Variable                    | Purpose                                      | Where to get it                                      |
 |-----------------------------|----------------------------------------------|------------------------------------------------------|
 | `GOOGLE_MAPS_API_KEY`       | Street View, Satellite imagery, Geocoding    | [Google Cloud Console](https://console.cloud.google.com/) |
 | `MAPBOX_API_KEY`            | Map display and geocoding in the frontend    | [Mapbox Account](https://account.mapbox.com/)        |
-| `OPENAI_API_KEY`            | GPT-4o Vision for property image analysis    | [OpenAI Platform](https://platform.openai.com/)     |
+| `OPENAI_API_KEY`            | Vision model for property image analysis     | [OpenAI Platform](https://platform.openai.com/)     |
+| `VISION_MODEL`              | OpenAI model for image analysis (default `gpt-4o`) | [OpenAI models](https://developers.openai.com/api/docs/models) |
+| `VISION_MAX_OUTPUT_TOKENS`  | Output token cap, including reasoning tokens (default `4000`) | — |
+| `VISION_TEMPERATURE`        | Optional; only sent when set                 | — |
+| `VISION_REASONING_EFFORT`   | Optional; only sent when set (reasoning models) | — |
 | `SUPABASE_URL`              | PostgreSQL database URL                      | [Supabase Dashboard](https://supabase.com/dashboard) |
 | `SUPABASE_SECRET_KEY`       | Supabase secret key (server-side only)      | [Supabase Dashboard](https://supabase.com/dashboard) |
 | `LANGFUSE_PUBLIC_KEY`       | Runtime trace project key                   | Local headless initialization or Langfuse settings   |

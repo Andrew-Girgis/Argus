@@ -17,7 +17,7 @@ def setup_runtime_observability(config: Settings = settings) -> None:
     enabled = runtime_observability_enabled(config)
     os.environ["LANGFUSE_TRACING_ENABLED"] = str(enabled).lower()
     os.environ["LANGFUSE_BASE_URL"] = config.LANGFUSE_BASE_URL
-    os.environ["LANGFUSE_ENVIRONMENT"] = config.OBSERVABILITY_ENV
+    os.environ["LANGFUSE_TRACING_ENVIRONMENT"] = config.OBSERVABILITY_ENV
     os.environ["LANGFUSE_RELEASE"] = config.APP_VERSION
 
     if enabled:

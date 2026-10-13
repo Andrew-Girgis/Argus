@@ -1,9 +1,9 @@
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 
 # --- Enums ---
@@ -36,59 +36,105 @@ class PropertyImage(BaseModel):
     fetched_at: datetime
 
 
+Confidence = Annotated[
+    float,
+    Field(
+        ge=0.0,
+        le=1.0,
+        description="Certainty from 0.0 to 1.0 based on what is visible. "
+        "1.0 only when unambiguous; 0.0 when the value is null.",
+    ),
+]
+
+PropertyType = Literal[
+    "Detached", "Semi-Detached", "Townhouse", "Condo", "Duplex", "Triplex", "Other"
+]
+Stories = Literal["1", "1.5", "2", "2.5", "3", "Split-level"]
+ParkingType = Literal[
+    "Attached Garage",
+    "Detached Garage",
+    "Carport",
+    "Driveway Only",
+    "Street",
+    "None visible",
+]
+Condition = Literal["Excellent", "Good", "Fair", "Poor"]
+ApproximateAge = Literal[
+    "0-5 years", "5-15 years", "16-30 years", "30-50 years", "50+ years"
+]
+LotShape = Literal["Regular", "Pie-Shaped", "Corner", "Irregular", "Cul-de-sac"]
+RoofType = Literal[
+    "Gable", "Clipped Gable", "Dutch Gable", "Gambrel", "Hip", "Mansard", "Shed", "Flat"
+]
+DrivewayMaterial = Literal[
+    "Concrete", "Asphalt", "Interlock/Paving Stone", "Gravel", "None visible"
+]
+
+
 class PropertyAnalysis(BaseModel):
     """Vision model output: one value and one confidence per observed feature.
 
-    Every field is nullable. ``None`` means the model could not determine the
-    value from the images, which is different from ``False`` or ``0``.
+    Every value is nullable. ``None`` means the model could not determine the
+    value from the images, which is different from ``False`` or ``0``. This
+    model is also the Structured Outputs schema sent to OpenAI, so field
+    descriptions are part of the prompt.
     """
 
-    model_config = ConfigDict(extra="allow", coerce_numbers_to_str=True)
-
-    property_type: str | None = None
-    property_type_confidence: float | None = None
-    home_style: str | None = None
-    home_style_confidence: float | None = None
-    stories: str | None = None
-    stories_confidence: float | None = None
-    exterior_material: str | None = None
-    exterior_material_confidence: float | None = None
+    property_type: PropertyType | None = None
+    property_type_confidence: Confidence = 0.0
+    home_style: str | None = Field(
+        default=None,
+        description="Architectural style, e.g. Colonial, Ranch, Tudor, Split-level, "
+        "Modern, Victorian, Bungalow, Contemporary.",
+    )
+    home_style_confidence: Confidence = 0.0
+    stories: Stories | None = None
+    stories_confidence: Confidence = 0.0
+    exterior_material: str | None = Field(
+        default=None,
+        description="Primary exterior material, e.g. Brick, Vinyl Siding, Stone, "
+        "Stucco, Wood, Aluminum, Mixed.",
+    )
+    exterior_material_confidence: Confidence = 0.0
     has_pool: bool | None = None
-    pool_confidence: float | None = None
-    tree_count_estimate: int | None = None
-    tree_count_confidence: float | None = None
+    pool_confidence: Confidence = 0.0
+    tree_count_estimate: int | None = Field(default=None, ge=0)
+    tree_count_confidence: Confidence = 0.0
     has_garage: bool | None = None
-    garage_confidence: float | None = None
-    parking_type: str | None = None
-    parking_type_confidence: float | None = None
-    parking_spaces_estimate: int | None = None
-    parking_spaces_confidence: float | None = None
-    condition_estimate: str | None = None
-    condition_confidence: float | None = None
-    approximate_age: str | None = None
-    approximate_age_confidence: float | None = None
-    lot_shape: str | None = None
-    lot_shape_confidence: float | None = None
+    garage_confidence: Confidence = 0.0
+    parking_type: ParkingType | None = None
+    parking_type_confidence: Confidence = 0.0
+    parking_spaces_estimate: int | None = Field(default=None, ge=0)
+    parking_spaces_confidence: Confidence = 0.0
+    condition_estimate: Condition | None = None
+    condition_confidence: Confidence = 0.0
+    approximate_age: ApproximateAge | None = None
+    approximate_age_confidence: Confidence = 0.0
+    lot_shape: LotShape | None = None
+    lot_shape_confidence: Confidence = 0.0
     has_fenced_yard: bool | None = None
-    fence_confidence: float | None = None
+    fence_confidence: Confidence = 0.0
     has_solar_panels: bool | None = None
-    solar_panels_confidence: float | None = None
-    roof_type: str | None = None
-    roof_type_confidence: float | None = None
+    solar_panels_confidence: Confidence = 0.0
+    roof_type: RoofType | None = None
+    roof_type_confidence: Confidence = 0.0
     has_sidewalk: bool | None = None
-    sidewalk_confidence: float | None = None
-    driveway_material: str | None = None
-    driveway_material_confidence: float | None = None
+    sidewalk_confidence: Confidence = 0.0
+    driveway_material: DrivewayMaterial | None = None
+    driveway_material_confidence: Confidence = 0.0
     has_chimney: bool | None = None
-    chimney_confidence: float | None = None
+    chimney_confidence: Confidence = 0.0
     has_deck_or_patio: bool | None = None
-    deck_patio_confidence: float | None = None
+    deck_patio_confidence: Confidence = 0.0
     has_gutters: bool | None = None
-    gutters_confidence: float | None = None
-    has_detached_structure: bool | None = None
-    detached_structure_confidence: float | None = None
+    gutters_confidence: Confidence = 0.0
+    has_detached_structure: bool | None = Field(
+        default=None,
+        description="Sheds, workshops, or secondary structures, excluding the main garage.",
+    )
+    detached_structure_confidence: Confidence = 0.0
     has_ac_unit: bool | None = None
-    ac_unit_confidence: float | None = None
+    ac_unit_confidence: Confidence = 0.0
 
     def to_record(
         self,
