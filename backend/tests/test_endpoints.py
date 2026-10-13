@@ -5,6 +5,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 from app.models.schemas import PropertyAnalysis, ServiceResult
+from app.services.vision import VisionResult
 
 
 @pytest.fixture
@@ -60,14 +61,18 @@ async def test_get_images(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_analyze(client: AsyncClient):
     mock_vision = ServiceResult(
-        data=PropertyAnalysis(
-            home_style="Colonial",
-            has_pool=False,
-            pool_confidence=0.1,
-            tree_count_estimate=3,
-            has_garage=True,
-            condition_estimate="Good",
-            approximate_age="20-30 years",
+        data=VisionResult(
+            analysis=PropertyAnalysis(
+                home_style="Colonial",
+                has_pool=False,
+                pool_confidence=0.1,
+                tree_count_estimate=3,
+                has_garage=True,
+                condition_estimate="Good",
+                approximate_age="16-30 years",
+            ),
+            model="gpt-4o-2024-08-06",
+            prompt_version="test",
         ),
         error=None,
         source="openai_vision",
@@ -100,8 +105,8 @@ async def test_analyze(client: AsyncClient):
 
     assert resp.status_code == 200
     data = resp.json()
-    assert data["analysis"]["data"]["home_style"] == "Colonial"
-    assert data["analysis"]["data"]["has_garage"] is True
+    assert data["analysis"]["data"]["analysis"]["home_style"] == "Colonial"
+    assert data["analysis"]["data"]["analysis"]["has_garage"] is True
     assert data["segmentation"]["data"]["status"] == "sam2_not_available"
 
 
@@ -191,14 +196,18 @@ async def test_create_property(client: AsyncClient):
         source="supabase",
     )
     mock_vision = ServiceResult(
-        data=PropertyAnalysis(
-            home_style="Victorian",
-            has_pool=False,
-            pool_confidence=0.05,
-            tree_count_estimate=5,
-            has_garage=False,
-            condition_estimate="Good",
-            approximate_age="50+ years",
+        data=VisionResult(
+            analysis=PropertyAnalysis(
+                home_style="Victorian",
+                has_pool=False,
+                pool_confidence=0.05,
+                tree_count_estimate=5,
+                has_garage=False,
+                condition_estimate="Good",
+                approximate_age="50+ years",
+            ),
+            model="gpt-4o-2024-08-06",
+            prompt_version="test",
         ),
         error=None,
         source="openai_vision",

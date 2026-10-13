@@ -108,10 +108,10 @@ async def create_property(req: PropertyRequest):
         if vision_result.error:
             errors.append(f"Vision analysis: {vision_result.error}")
         elif vision_result.data:
-            analysis_data = vision_result.data.to_record(
+            analysis_data = vision_result.data.analysis.to_record(
                 analysis_id=str(uuid.uuid4()),
                 property_id=property_id,
-                model_used=vision.MODEL,
+                model_used=vision_result.data.model,
                 analyzed_at=_now(),
             )
             save_result = await supabase.save_analysis(analysis_data)
