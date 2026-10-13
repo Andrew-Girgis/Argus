@@ -42,12 +42,7 @@ export default function InsightChip({
           dotColors[variant],
         )}
       />
-      <span
-        className={cn(
-          "font-mono text-xs font-medium tracking-wider",
-          textColors[variant],
-        )}
-      >
+      <span className={cn("font-mono text-xs font-medium tracking-wider", textColors[variant])}>
         {label}
         {confidence != null && ` · ${confidence}%`}
       </span>

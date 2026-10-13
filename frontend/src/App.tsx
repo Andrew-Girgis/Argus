@@ -130,10 +130,7 @@ export default function App() {
                     subtitle="Property location and nearby points of interest"
                   />
                   <div className="mt-4">
-                    <MapPanel
-                      lat={coords.lat}
-                      lon={coords.lon}
-                    />
+                    <MapPanel lat={coords.lat} lon={coords.lon} />
                   </div>
                 </div>
               </div>

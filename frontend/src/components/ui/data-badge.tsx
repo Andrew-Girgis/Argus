@@ -33,9 +33,7 @@ export default function DataBadge({ children, className, copyValue }: DataBadgeP
       className={cn(baseClass, "cursor-pointer transition-colors hover:text-foreground")}
     >
       {children}
-      {copied
-        ? <Check className="size-3 text-primary" />
-        : <Copy className="size-3 opacity-50" />}
+      {copied ? <Check className="size-3 text-primary" /> : <Copy className="size-3 opacity-50" />}
     </button>
   );
 }

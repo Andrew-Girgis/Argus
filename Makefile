@@ -38,9 +38,9 @@ test:
 build:
 	cd frontend && ~/.vite-plus/bin/vp build
 
-# Lint + format + typecheck frontend
+# Lint + format + typecheck frontend (vp check does not run tsc)
 check:
-	cd frontend && ~/.vite-plus/bin/vp check
+	cd frontend && ~/.vite-plus/bin/vp check && npx tsc -b --noEmit
 
 # Portable container workflows for macOS and Linux
 docker-up:
