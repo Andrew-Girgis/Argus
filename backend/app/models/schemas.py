@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # --- Enums ---
@@ -36,10 +36,15 @@ class PropertyImage(BaseModel):
     fetched_at: datetime
 
 
-class AIAnalysis(BaseModel):
-    id: UUID
-    property_id: UUID
-    model_used: str
+class PropertyAnalysis(BaseModel):
+    """Vision model output: one value and one confidence per observed feature.
+
+    Every field is nullable. ``None`` means the model could not determine the
+    value from the images, which is different from ``False`` or ``0``.
+    """
+
+    model_config = ConfigDict(extra="allow", coerce_numbers_to_str=True)
+
     property_type: str | None = None
     property_type_confidence: float | None = None
     home_style: str | None = None
@@ -84,6 +89,30 @@ class AIAnalysis(BaseModel):
     detached_structure_confidence: float | None = None
     has_ac_unit: bool | None = None
     ac_unit_confidence: float | None = None
+
+    def to_record(
+        self,
+        *,
+        analysis_id: str,
+        property_id: str,
+        model_used: str,
+        analyzed_at: str,
+    ) -> dict[str, Any]:
+        """Build the ``ai_analysis`` row, also used as the API response."""
+        return {
+            "id": analysis_id,
+            "property_id": property_id,
+            "model_used": model_used,
+            **self.model_dump(include=set(PropertyAnalysis.model_fields)),
+            "raw_response": self.model_dump(),
+            "analyzed_at": analyzed_at,
+        }
+
+
+class AIAnalysis(PropertyAnalysis):
+    id: UUID
+    property_id: UUID
+    model_used: str
     raw_response: dict[str, Any] = Field(default_factory=dict)
     analyzed_at: datetime
 

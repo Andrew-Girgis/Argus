@@ -4,7 +4,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
-from app.models.schemas import ServiceResult
+from app.models.schemas import PropertyAnalysis, ServiceResult
 
 
 @pytest.fixture
@@ -60,15 +60,15 @@ async def test_get_images(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_analyze(client: AsyncClient):
     mock_vision = ServiceResult(
-        data={
-            "home_style": "Colonial",
-            "has_pool": False,
-            "pool_confidence": 0.1,
-            "tree_count_estimate": 3,
-            "has_garage": True,
-            "condition_estimate": "Good",
-            "approximate_age": "20-30 years",
-        },
+        data=PropertyAnalysis(
+            home_style="Colonial",
+            has_pool=False,
+            pool_confidence=0.1,
+            tree_count_estimate=3,
+            has_garage=True,
+            condition_estimate="Good",
+            approximate_age="20-30 years",
+        ),
         error=None,
         source="openai_vision",
     )
@@ -191,15 +191,15 @@ async def test_create_property(client: AsyncClient):
         source="supabase",
     )
     mock_vision = ServiceResult(
-        data={
-            "home_style": "Victorian",
-            "has_pool": False,
-            "pool_confidence": 0.05,
-            "tree_count_estimate": 5,
-            "has_garage": False,
-            "condition_estimate": "Good",
-            "approximate_age": "50+ years",
-        },
+        data=PropertyAnalysis(
+            home_style="Victorian",
+            has_pool=False,
+            pool_confidence=0.05,
+            tree_count_estimate=5,
+            has_garage=False,
+            condition_estimate="Good",
+            approximate_age="50+ years",
+        ),
         error=None,
         source="openai_vision",
     )
