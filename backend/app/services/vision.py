@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from langfuse.openai import AsyncOpenAI
@@ -5,6 +6,7 @@ from pydantic import BaseModel, ValidationError
 
 from app.config import settings
 from app.models.schemas import PropertyAnalysis, ServiceResult
+from app.services.images import ImageDownloadError, download_image
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +33,7 @@ class VisionResult(BaseModel):
     analysis: PropertyAnalysis
     model: str
     prompt_version: str
+    image_sha256: dict[str, str]
 
 
 def _model_parameters() -> dict:
@@ -66,16 +69,35 @@ async def analyze_property(
                 source="openai_vision",
             )
 
-        client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        # Send image bytes rather than URLs: Google image URLs contain the API
+        # key, and request inputs are recorded in traces.
+        sources = {
+            label: url
+            for label, url in (
+                ("street_view", street_view_url),
+                ("satellite", satellite_url),
+            )
+            if url
+        }
+        downloaded = dict(
+            zip(
+                sources,
+                await asyncio.gather(
+                    *(download_image(url, label) for label, url in sources.items())
+                ),
+            )
+        )
+        image_sha256 = {label: image.sha256 for label, image in downloaded.items()}
 
         content: list[dict] = [
             {"type": "input_text", "text": "Analyze this property."}
         ]
-        for url in (street_view_url, satellite_url):
-            if url:
-                content.append(
-                    {"type": "input_image", "image_url": url, "detail": "high"}
-                )
+        for image in downloaded.values():
+            content.append(
+                {"type": "input_image", "image_url": image.data_url, "detail": "high"}
+            )
+
+        client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
         params = _model_parameters()
         response = await client.responses.parse(
@@ -92,6 +114,7 @@ async def analyze_property(
                 "prompt_version": PROMPT_VERSION,
                 "model": settings.VISION_MODEL,
                 "model_parameters": params,
+                **{f"{label}_sha256": sha for label, sha in image_sha256.items()},
             },
         )
 
@@ -119,11 +142,14 @@ async def analyze_property(
                 analysis=response.output_parsed,
                 model=response.model,
                 prompt_version=PROMPT_VERSION,
+                image_sha256=image_sha256,
             ),
             error=None,
             source="openai_vision",
         )
 
+    except ImageDownloadError as exc:
+        return ServiceResult(data=None, error=str(exc), source="openai_vision")
     except ValidationError as exc:
         # Structured Outputs guarantees the schema unless the output was cut off.
         logger.exception("Vision output did not match the analysis schema")
