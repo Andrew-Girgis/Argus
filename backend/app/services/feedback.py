@@ -5,11 +5,20 @@ from uuid import uuid4
 from psycopg.types.json import Jsonb
 
 from app.models.schemas import FeedbackRequest, ServiceResult
+from app.observability import score_feedback
 
 logger = logging.getLogger(__name__)
 
 
 async def save_feedback(req: FeedbackRequest) -> ServiceResult:
+    """Save a user correction, then attach it to the analysis trace as a score."""
+    result = await _store_feedback(req)
+    if result.error is None:
+        score_feedback(req, str(result.data["id"]))
+    return result
+
+
+async def _store_feedback(req: FeedbackRequest) -> ServiceResult:
     """Save a user correction to the ai_feedback table."""
     try:
         from app.config import settings

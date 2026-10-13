@@ -5,6 +5,7 @@ import httpx
 
 from app.config import settings
 from app.models.schemas import ServiceResult
+from app.utils import redact_secrets
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ async def fetch_street_view(
     except Exception as exc:
         logger.exception("Error fetching Street View image")
         return ServiceResult(
-            data=None, error=str(exc), source="google_street_view"
+            data=None, error=redact_secrets(str(exc)), source="google_street_view"
         )
 
 
@@ -72,7 +73,7 @@ async def fetch_satellite(lat: float, lon: float) -> ServiceResult:
 
     except Exception as exc:
         logger.exception("Error fetching satellite image")
-        return ServiceResult(data=None, error=str(exc), source="google_satellite")
+        return ServiceResult(data=None, error=redact_secrets(str(exc)), source="google_satellite")
 
 
 def _extract_component(result: dict, component_type: str) -> str | None:
@@ -167,4 +168,4 @@ async def reverse_geocode(lat: float, lon: float) -> ServiceResult:
 
     except Exception as exc:
         logger.exception("Error during reverse geocoding")
-        return ServiceResult(data=None, error=str(exc), source="google_geocode")
+        return ServiceResult(data=None, error=redact_secrets(str(exc)), source="google_geocode")

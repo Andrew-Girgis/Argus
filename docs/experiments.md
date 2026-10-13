@@ -30,9 +30,15 @@ local testing only and must be replaced before deployment to a shared machine.
 ## 2. Collect Candidate Cases
 
 Set `LANGFUSE_TRACING_ENABLED=true`, then start the app with `make dev-full`.
-One property analysis should be one trace. Use stable names such as
-`analyze-property-images`; keep model names and property-specific values in
-metadata rather than trace names.
+Each `POST /api/v1/property` is one trace named `analyze-property`, with a
+child span per pipeline step and the `analyze-property-images` generation under
+`vision-analysis`. Trace metadata carries `analysis_id`, `property_id`,
+`vision_model`, `prompt_version`, and `workflow_version`; keep model names and
+property-specific values in metadata rather than trace names.
+
+The trace ID is derived from the analysis ID
+(`app.observability.analysis_trace_id`), so any analysis row can be mapped to
+its trace without storing the trace ID.
 
 Review traces for:
 
@@ -46,6 +52,12 @@ The backend downloads Google imagery and sends it to the model as image bytes,
 so traces contain the images (stored as Langfuse media) but not the keyed Google
 URLs. Each trace records `street_view_sha256` and `satellite_sha256` so a case
 can be tied to the exact image bytes the model saw.
+
+When a user submits a correction through `POST /api/v1/feedback`, it is saved
+to `ai_feedback` and attached to the analysis trace as a boolean score named
+`correct:<field_name>` (1 = the reviewer kept the AI value, 0 = corrected),
+with the AI value, corrected value, and notes. Use these scores to find traces
+worth reviewing; they are user feedback, not benchmark truth.
 
 ## 3. Build Ground Truth
 

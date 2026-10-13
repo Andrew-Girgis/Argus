@@ -1,6 +1,14 @@
+import logging
 import os
+from collections.abc import Awaitable, Callable
+from contextlib import contextmanager
+from typing import Any
 
 from app.config import Settings, settings
+from app.models.schemas import FeedbackRequest, ServiceResult
+from app.utils import redact_secrets
+
+logger = logging.getLogger(__name__)
 
 
 def runtime_observability_enabled(config: Settings = settings) -> bool:
@@ -40,3 +48,93 @@ def setup_mlflow_evaluation(config: Settings = settings) -> None:
 
     mlflow.set_tracking_uri(config.MLFLOW_TRACKING_URI)
     mlflow.set_experiment(config.MLFLOW_EXPERIMENT_NAME)
+
+
+def analysis_trace_id(analysis_id: str) -> str:
+    """Deterministic Langfuse trace ID for a property analysis.
+
+    Feedback carries only the analysis ID, so deriving the trace ID from it lets
+    scores be attached without storing the trace ID in the database.
+    """
+    from langfuse import Langfuse
+
+    return Langfuse.create_trace_id(seed=analysis_id)
+
+
+@contextmanager
+def trace_analysis(analysis_id: str, *, input: dict, metadata: dict[str, str]):
+    """Root span for one property analysis; a no-op when tracing is disabled."""
+    from langfuse import get_client, propagate_attributes
+
+    with (
+        get_client().start_as_current_observation(
+            name="analyze-property",
+            as_type="span",
+            trace_context={"trace_id": analysis_trace_id(analysis_id)},
+            input=input,
+        ) as root,
+        propagate_attributes(
+            trace_name="analyze-property",
+            metadata={"analysis_id": analysis_id, **metadata},
+        ),
+    ):
+        yield root
+
+
+async def traced_call(
+    name: str,
+    call: Awaitable[ServiceResult],
+    *,
+    input: dict | None = None,
+    summarize: Callable[[Any], dict] | None = None,
+) -> ServiceResult:
+    """Await a service call inside a child span and record its outcome.
+
+    Only ``summarize(data)`` is recorded as output, never the raw data, because
+    some results (e.g. image URLs) contain credentials.
+    """
+    from langfuse import get_client
+
+    with get_client().start_as_current_observation(
+        name=name, as_type="span", input=input
+    ) as span:
+        result = await call
+        if result.error:
+            span.update(
+                level="ERROR",
+                status_message=redact_secrets(result.error),
+                output={"source": result.source},
+            )
+        else:
+            output = summarize(result.data) if summarize and result.data else {}
+            span.update(output={"source": result.source, **output})
+        return result
+
+
+def score_feedback(req: FeedbackRequest, feedback_id: str) -> None:
+    """Attach a reviewer's verdict to the analysis trace as a Langfuse score.
+
+    Never raises: feedback is already saved, and the score is best effort.
+    """
+    if not req.analysis_id or not runtime_observability_enabled():
+        return
+    try:
+        from langfuse import get_client
+
+        get_client().create_score(
+            name=f"correct:{req.field_name}",
+            value=1.0 if req.corrected_value == req.ai_value else 0.0,
+            data_type="BOOLEAN",
+            trace_id=analysis_trace_id(req.analysis_id),
+            score_id=feedback_id,
+            comment=req.notes,
+            metadata={
+                "feedback_id": feedback_id,
+                "property_id": req.property_id,
+                "ai_value": req.ai_value,
+                "ai_confidence": req.ai_confidence,
+                "corrected_value": req.corrected_value,
+            },
+        )
+    except Exception:
+        logger.warning("Could not send feedback score to Langfuse", exc_info=True)
