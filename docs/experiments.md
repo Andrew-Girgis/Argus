@@ -42,8 +42,10 @@ Review traces for:
 - latency, token usage, and errors;
 - absence of API keys or private data in captured fields.
 
-Google image URLs currently contain credentials. Do not enable runtime tracing
-for retained data until URL credentials are masked or removed from trace input.
+The backend downloads Google imagery and sends it to the model as image bytes,
+so traces contain the images (stored as Langfuse media) but not the keyed Google
+URLs. Each trace records `street_view_sha256` and `satellite_sha256` so a case
+can be tied to the exact image bytes the model saw.
 
 ## 3. Build Ground Truth
 
