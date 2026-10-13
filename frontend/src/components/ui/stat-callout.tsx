@@ -17,9 +17,7 @@ export default function StatCallout({ label, value, className }: StatCalloutProp
       <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         {label}
       </span>
-      <span className="font-mono text-2xl font-bold text-foreground tracking-tight">
-        {value}
-      </span>
+      <span className="font-mono text-2xl font-bold text-foreground tracking-tight">{value}</span>
     </div>
   );
 }

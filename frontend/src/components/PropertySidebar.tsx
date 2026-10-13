@@ -123,7 +123,6 @@ export default function PropertySidebar({ property }: PropertySidebarProps) {
               <Separator className="bg-border" />
             </>
           )}
-
         </div>
       </ScrollArea>
     </div>

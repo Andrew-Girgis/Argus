@@ -11,7 +11,7 @@ make dev          # Install deps + start both servers (backend :8000, frontend :
 make backend      # Backend only: cd backend && uv run uvicorn app.main:app --reload
 make frontend     # Frontend only: generates frontend/.env, then cd frontend && vp dev
 make test         # cd backend && uv run pytest -v
-make check        # cd frontend && vp check  (lint + format + typecheck)
+make check        # cd frontend && vp check && tsc -b --noEmit  (lint + format + typecheck)
 make build        # cd frontend && vp build
 ```
 
@@ -50,7 +50,8 @@ No frontend tests exist currently.
 ## Frontend Lint/Typecheck
 
 ```bash
-cd frontend && ~/.vite-plus/bin/vp check    # runs oxc + typescript + unicorn + react lints
+cd frontend && ~/.vite-plus/bin/vp check    # runs oxc + typescript + unicorn + react lints and formatting
+cd frontend && npx tsc -b --noEmit          # type errors (not covered by vp check)
 ```
 
 The lint config is in `vite.config.ts` under `defineConfig({ lint: ... })`. `src/components/ui/**` files have relaxed `react/only-export-components` rule.

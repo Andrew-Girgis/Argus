@@ -33,7 +33,9 @@ export async function fetchPois(lat: number, lon: number) {
   return data;
 }
 
-export async function submitFeedback(payload: FeedbackPayload): Promise<{ ok: boolean; error: string | null }> {
+export async function submitFeedback(
+  payload: FeedbackPayload,
+): Promise<{ ok: boolean; error: string | null }> {
   const { data } = await api.post("/api/v1/feedback", payload);
   return data;
 }
