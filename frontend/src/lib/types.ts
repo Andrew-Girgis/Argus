@@ -29,11 +29,11 @@ export interface AIAnalysis {
   stories_confidence: number | null;
   exterior_material: string | null;
   exterior_material_confidence: number | null;
-  has_pool: boolean;
+  has_pool: boolean | null;
   pool_confidence: number | null;
   tree_count_estimate: number | null;
   tree_count_confidence: number | null;
-  has_garage: boolean;
+  has_garage: boolean | null;
   garage_confidence: number | null;
   parking_type: string | null;
   parking_type_confidence: number | null;

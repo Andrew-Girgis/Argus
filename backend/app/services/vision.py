@@ -3,11 +3,14 @@ import logging
 import re
 
 from langfuse.openai import AsyncOpenAI
+from pydantic import ValidationError
 
 from app.config import settings
-from app.models.schemas import ServiceResult
+from app.models.schemas import PropertyAnalysis, ServiceResult
 
 logger = logging.getLogger(__name__)
+
+MODEL = "gpt-4o"
 
 ANALYSIS_PROMPT = """You are an expert property analyst. Analyze the provided property images
 (street view and/or satellite) and return a JSON object with the following fields.
@@ -122,7 +125,7 @@ async def analyze_property(
     street_view_url: str | None = None,
     satellite_url: str | None = None,
 ) -> ServiceResult:
-    """Analyze property images using OpenAI Vision API (gpt-4o)."""
+    """Analyze property images with the OpenAI vision model."""
     raw_text = ""
     try:
         if not street_view_url and not satellite_url:
@@ -153,7 +156,7 @@ async def analyze_property(
             )
 
         response = await client.chat.completions.create(
-            model="gpt-4o",
+            model=MODEL,
             messages=[{"role": "user", "content": content}],
             max_tokens=1500,
             temperature=0.2,
@@ -168,7 +171,7 @@ async def analyze_property(
         raw_text = response.choices[0].message.content or ""
         logger.info("Vision API raw response: %s", raw_text[:500])
 
-        analysis = _extract_json(raw_text)
+        analysis = PropertyAnalysis.model_validate(_extract_json(raw_text))
 
         return ServiceResult(data=analysis, error=None, source="openai_vision")
 
@@ -177,6 +180,13 @@ async def analyze_property(
         return ServiceResult(
             data={"raw_text": raw_text},
             error=f"JSON parse error: {exc}",
+            source="openai_vision",
+        )
+    except ValidationError as exc:
+        logger.exception("Vision API response did not match the analysis schema")
+        return ServiceResult(
+            data={"raw_text": raw_text},
+            error=f"Schema validation error: {exc}",
             source="openai_vision",
         )
     except Exception as exc:

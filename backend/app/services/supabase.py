@@ -256,63 +256,9 @@ async def save_images(
         return ServiceResult(data=None, error=str(exc), source="supabase")
 
 
-async def save_analysis(
-    property_id: str, analysis: dict[str, Any]
-) -> ServiceResult:
-    """Save AI analysis results to Supabase."""
+async def save_analysis(record: dict[str, Any]) -> ServiceResult:
+    """Save an AI analysis record built by ``PropertyAnalysis.to_record``."""
     try:
-        now = datetime.now(timezone.utc).isoformat()
-        record = {
-            "id": str(uuid4()),
-            "property_id": property_id,
-            "model_used": "gpt-4o",
-            "property_type": analysis.get("property_type"),
-            "property_type_confidence": analysis.get("property_type_confidence"),
-            "home_style": analysis.get("home_style"),
-            "home_style_confidence": analysis.get("home_style_confidence"),
-            "stories": analysis.get("stories"),
-            "stories_confidence": analysis.get("stories_confidence"),
-            "exterior_material": analysis.get("exterior_material"),
-            "exterior_material_confidence": analysis.get("exterior_material_confidence"),
-            "has_pool": analysis.get("has_pool"),
-            "pool_confidence": analysis.get("pool_confidence"),
-            "tree_count_estimate": analysis.get("tree_count_estimate"),
-            "tree_count_confidence": analysis.get("tree_count_confidence"),
-            "has_garage": analysis.get("has_garage"),
-            "garage_confidence": analysis.get("garage_confidence"),
-            "parking_type": analysis.get("parking_type"),
-            "parking_type_confidence": analysis.get("parking_type_confidence"),
-            "parking_spaces_estimate": analysis.get("parking_spaces_estimate"),
-            "parking_spaces_confidence": analysis.get("parking_spaces_confidence"),
-            "condition_estimate": analysis.get("condition_estimate"),
-            "condition_confidence": analysis.get("condition_confidence"),
-            "approximate_age": analysis.get("approximate_age"),
-            "approximate_age_confidence": analysis.get("approximate_age_confidence"),
-            "lot_shape": analysis.get("lot_shape"),
-            "lot_shape_confidence": analysis.get("lot_shape_confidence"),
-            "has_fenced_yard": analysis.get("has_fenced_yard"),
-            "fence_confidence": analysis.get("fence_confidence"),
-            "has_solar_panels": analysis.get("has_solar_panels"),
-            "solar_panels_confidence": analysis.get("solar_panels_confidence"),
-            "roof_type": analysis.get("roof_type"),
-            "roof_type_confidence": analysis.get("roof_type_confidence"),
-            "has_sidewalk": analysis.get("has_sidewalk"),
-            "sidewalk_confidence": analysis.get("sidewalk_confidence"),
-            "driveway_material": analysis.get("driveway_material"),
-            "driveway_material_confidence": analysis.get("driveway_material_confidence"),
-            "has_chimney": analysis.get("has_chimney"),
-            "chimney_confidence": analysis.get("chimney_confidence"),
-            "has_deck_or_patio": analysis.get("has_deck_or_patio"),
-            "deck_patio_confidence": analysis.get("deck_patio_confidence"),
-            "has_gutters": analysis.get("has_gutters"),
-            "gutters_confidence": analysis.get("gutters_confidence"),
-            "has_detached_structure": analysis.get("has_detached_structure"),
-            "detached_structure_confidence": analysis.get("detached_structure_confidence"),
-            "has_ac_unit": analysis.get("has_ac_unit"),
-            "ac_unit_confidence": analysis.get("ac_unit_confidence"),
-            "raw_response": analysis,
-            "analyzed_at": now,
-        }
         if _using_postgres():
             _ensure_postgres_schema()
             postgres_record = {**record, "raw_response": Jsonb(record["raw_response"])}

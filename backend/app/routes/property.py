@@ -107,63 +107,16 @@ async def create_property(req: PropertyRequest):
         vision_result = await vision.analyze_property(street_view_url, satellite_url)
         if vision_result.error:
             errors.append(f"Vision analysis: {vision_result.error}")
-        if vision_result.data:
-            vd = vision_result.data
-            analysis_data = {
-                "id": str(uuid.uuid4()),
-                "property_id": property_id,
-                "model_used": "gpt-4o",
-                "property_type": vd.get("property_type"),
-                "property_type_confidence": vd.get("property_type_confidence"),
-                "home_style": vd.get("home_style"),
-                "home_style_confidence": vd.get("home_style_confidence"),
-                "stories": vd.get("stories"),
-                "stories_confidence": vd.get("stories_confidence"),
-                "exterior_material": vd.get("exterior_material"),
-                "exterior_material_confidence": vd.get("exterior_material_confidence"),
-                "has_pool": vd.get("has_pool", False),
-                "pool_confidence": vd.get("pool_confidence"),
-                "tree_count_estimate": vd.get("tree_count_estimate"),
-                "tree_count_confidence": vd.get("tree_count_confidence"),
-                "has_garage": vd.get("has_garage", False),
-                "garage_confidence": vd.get("garage_confidence"),
-                "parking_type": vd.get("parking_type"),
-                "parking_type_confidence": vd.get("parking_type_confidence"),
-                "parking_spaces_estimate": vd.get("parking_spaces_estimate"),
-                "parking_spaces_confidence": vd.get("parking_spaces_confidence"),
-                "condition_estimate": vd.get("condition_estimate"),
-                "condition_confidence": vd.get("condition_confidence"),
-                "approximate_age": vd.get("approximate_age"),
-                "approximate_age_confidence": vd.get("approximate_age_confidence"),
-                "lot_shape": vd.get("lot_shape"),
-                "lot_shape_confidence": vd.get("lot_shape_confidence"),
-                "has_fenced_yard": vd.get("has_fenced_yard", False),
-                "fence_confidence": vd.get("fence_confidence"),
-                "has_solar_panels": vd.get("has_solar_panels", False),
-                "solar_panels_confidence": vd.get("solar_panels_confidence"),
-                "roof_type": vd.get("roof_type"),
-                "roof_type_confidence": vd.get("roof_type_confidence"),
-                "has_sidewalk": vd.get("has_sidewalk", False),
-                "sidewalk_confidence": vd.get("sidewalk_confidence"),
-                "driveway_material": vd.get("driveway_material"),
-                "driveway_material_confidence": vd.get("driveway_material_confidence"),
-                "has_chimney": vd.get("has_chimney", False),
-                "chimney_confidence": vd.get("chimney_confidence"),
-                "has_deck_or_patio": vd.get("has_deck_or_patio", False),
-                "deck_patio_confidence": vd.get("deck_patio_confidence"),
-                "has_gutters": vd.get("has_gutters", False),
-                "gutters_confidence": vd.get("gutters_confidence"),
-                "has_detached_structure": vd.get("has_detached_structure", False),
-                "detached_structure_confidence": vd.get("detached_structure_confidence"),
-                "has_ac_unit": vd.get("has_ac_unit", False),
-                "ac_unit_confidence": vd.get("ac_unit_confidence"),
-                "raw_response": vd,
-                "analyzed_at": _now(),
-            }
-            if property_id:
-                save_result = await supabase.save_analysis(property_id, vd)
-                if save_result.error:
-                    errors.append(f"Save analysis: {save_result.error}")
+        elif vision_result.data:
+            analysis_data = vision_result.data.to_record(
+                analysis_id=str(uuid.uuid4()),
+                property_id=property_id,
+                model_used=vision.MODEL,
+                analyzed_at=_now(),
+            )
+            save_result = await supabase.save_analysis(analysis_data)
+            if save_result.error:
+                errors.append(f"Save analysis: {save_result.error}")
 
     # 5. SAM2 segmentation
     segmentation_data = None
