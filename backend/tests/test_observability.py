@@ -32,14 +32,16 @@ def test_setup_runtime_observability_sets_langfuse_environment(monkeypatch):
         LANGFUSE_BASE_URL="http://langfuse.test",
     )
 
-    setup_runtime_observability(config)
+    # Restore the environment afterwards so later tests don't run with tracing on.
+    with patch.dict(os.environ):
+        setup_runtime_observability(config)
 
-    assert os.environ["LANGFUSE_TRACING_ENABLED"] == "true"
-    assert os.environ["LANGFUSE_PUBLIC_KEY"] == "lf_pk_test"
-    assert os.environ["LANGFUSE_SECRET_KEY"] == "lf_sk_test"
-    assert os.environ["LANGFUSE_BASE_URL"] == "http://langfuse.test"
-    assert os.environ["LANGFUSE_TRACING_ENVIRONMENT"] == "test"
-    assert os.environ["LANGFUSE_RELEASE"] == "test-version"
+        assert os.environ["LANGFUSE_TRACING_ENABLED"] == "true"
+        assert os.environ["LANGFUSE_PUBLIC_KEY"] == "lf_pk_test"
+        assert os.environ["LANGFUSE_SECRET_KEY"] == "lf_sk_test"
+        assert os.environ["LANGFUSE_BASE_URL"] == "http://langfuse.test"
+        assert os.environ["LANGFUSE_TRACING_ENVIRONMENT"] == "test"
+        assert os.environ["LANGFUSE_RELEASE"] == "test-version"
 
 
 def test_setup_mlflow_evaluation_requires_explicit_enablement():
